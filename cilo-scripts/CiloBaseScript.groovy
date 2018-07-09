@@ -167,6 +167,9 @@ abstract class CiloBaseScript extends Script {
         def nameBytes = "${name}Bytes"
         def nameFile = "${name}File"
         def secretFile = new File("/home/cilo/secret/${name}")
+        if (secretFile == null || secretFile.length() <= 0) {
+          throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
+        }
         def secretBytes = secretFile.getBytes()
         def secretText = secretFile.getText()
         def binding = new Binding()
