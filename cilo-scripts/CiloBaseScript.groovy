@@ -90,6 +90,8 @@ abstract class CiloBaseScript extends Script {
             def sshFile = new File("${filename}.ssh")
             sshFile << "#!/usr/bin/env sh\n"
             sshFile << "ssh -o \"StrictHostKeyChecking no\" -i ${sshBoundIdentityFile} ${sshBoundAddress} 'bash -s' < ${filename}\n"
+            // TODO: pass envMap through ssh.
+            //  StackOverflow: https://stackoverflow.com/questions/4409951/can-i-forward-env-variables-over-ssh
             def shReturn = shell("${filename}.ssh")
             sshFile.delete()
             return shReturn
@@ -154,34 +156,51 @@ abstract class CiloBaseScript extends Script {
             envMap -= ["${key}":"${value}"]
         }
     }
-    
-    public static def secret(name, closure) {
-        shell("cilo-decrypt-secret ${name}")
-        def nameText = "${name}Text"
-        def nameBytes = "${name}Bytes"
-        def nameFile = "${name}File"
-        def secretFile = new File("/home/cilo/secret/${name}")
-        if (secretFile == null || secretFile.length() <= 0) {
-          throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
-        }
-        def secretBytes = secretFile.getBytes()
-        def secretText = secretFile.getText()
+
+    public static def secrets(namesMap, closure) {
         def binding = new Binding()
-        secretsMap << ["${name}":"${secretText}"]
-        secretsMap << ["${nameText}":"${secretText}"]
-        secretsMap << ["${nameBytes}":"${secretBytes}"]
-        secretsMap << ["${nameFile}":"/home/cilo/secret/${name}"]
-        for (secretPair in secretsMap) {
-            binding.setVariable(secretPair.key, secretPair.value)
+        for (name in namesMap) {
+            shell("cilo-decrypt-secret ${name}")
+            def nameText = "${name}Text"
+            def nameBytes = "${name}Bytes"
+            def nameFile = "${name}File"
+            def secretFile = new File("/home/cilo/secret/${name}")
+            if (secretFile == null || secretFile.length() <= 0) {
+                throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
+            }
+            def secretBytes = secretFile.getBytes()
+            def secretText = secretFile.getText()
+            secretsMap << ["${name}":"${secretText}"]
+            secretsMap << ["${nameText}":"${secretText}"]
+            secretsMap << ["${nameBytes}":"${secretBytes}"]
+            secretsMap << ["${nameFile}":"/home/cilo/secret/${name}"]
+            for (secretPair in secretsMap) {
+                binding.setVariable(secretPair.key, secretPair.value)
+            }
         }
         closure.delegate = this;
         closure.setBinding(binding)
         closure.call()
-        secretsMap -= ["${name}":"${secretText}"]
-        secretsMap -= ["${nameText}":"${secretText}"]
-        secretsMap -= ["${nameBytes}":"${secretBytes}"]
-        secretsMap -= ["${nameFile}":"/home/cilo/secret/${name}"]
-        shell("rm /home/cilo/secret/${name}")
+        for (name in namesMap) {
+            def nameText = "${name}Text"
+            def nameBytes = "${name}Bytes"
+            def nameFile = "${name}File"
+            def secretFile = new File("/home/cilo/secret/${name}")
+            if (secretFile == null || secretFile.length() <= 0) {
+                throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
+            }
+            def secretBytes = secretFile.getBytes()
+            def secretText = secretFile.getText()
+            secretsMap -= ["${name}":"${secretText}"]
+            secretsMap -= ["${nameText}":"${secretText}"]
+            secretsMap -= ["${nameBytes}":"${secretBytes}"]
+            secretsMap -= ["${nameFile}":"/home/cilo/secret/${name}"]
+            shell("rm /home/cilo/secret/${name}")
+        }
+    }
+    
+    public static def secret(name, closure) {
+        secrets([name], closure)
     }
 }
 

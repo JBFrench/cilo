@@ -207,12 +207,10 @@ step "Library Jar", {
 }
 
 step "SSH", {
-    secret "awsEc2Address", {
-        secret "awsEc2Key", {
-            ssh("ec2-user@${awsEc2Address}", "${awsEc2KeyFile}") {
-                $ uname -a
-                $ env
-            }
+    secrets(["awsEc2Address", "awsEc2Key"]) {
+        ssh("ec2-user@${awsEc2Address}", "${awsEc2KeyFile}") {
+            $ uname -a
+            $ env
         }
     }
 }
