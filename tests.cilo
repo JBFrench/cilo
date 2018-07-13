@@ -203,6 +203,17 @@ step "Library Jar", {
     capitalCountryBiMap.put("Washington, D.C.", "USA");
     capitalCountryBiMap.put("Moscow", "Russia");
     String russia = capitalCountryBiMap.get("Moscow")
-    println "${russia} is the capital of Moscow."
+    println "Moscow is the capital of ${russia}."
+}
+
+step "SSH", {
+    secret "awsEc2Address", {
+        secret "awsEc2Key", {
+            ssh("ec2-user@${awsEc2Address}", "${awsEc2KeyFile}") {
+                $ uname -a
+                $ env
+            }
+        }
+    }
 }
 

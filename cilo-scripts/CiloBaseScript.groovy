@@ -4,19 +4,22 @@ abstract class CiloBaseScript extends Script {
     abstract def runCode()
 
     private static Boolean firstRun = true;
-    public static def steps = [:]
-    public static def secretsMap = [:]
-    public static def envMap = [:]
+    private static def steps = [:]
+    private static def secretsMap = [:]
+    private static def envMap = [:]
     
+    private static def isInsideSshClosure = false
+    private static def sshBoundAddress
+    private static def sshBoundIdentityFile
 
-    public static def stdOutInterceptor
-    public static def stdErrInterceptor
+    private static def stdOutInterceptor
+    private static def stdErrInterceptor
     
     // used by macro processor
-    public static def stdMap = [:]
-    public static def stdOut = ""
-    public static def stdErr = ""
-    public static def exitCode = 0
+    protected static def stdMap = [:]
+    protected static def stdOut = ""
+    protected static def stdErr = ""
+    protected static def exitCode = 0
     
     def run() {
         if (firstRun) {
@@ -80,11 +83,35 @@ abstract class CiloBaseScript extends Script {
     }
                     
     public static def ciloShellScript(filename) {
-        shell("chmod 777 $filename")
-        return shell("$filename")
+        shell("chmod 700 $filename")
+        if (isInsideSshClosure) {
+            shell("touch ${filename}.ssh", false)
+            shell("chmod 700 ${filename}.ssh", false)
+            def sshFile = new File("${filename}.ssh")
+            sshFile << "#!/usr/bin/env sh\n"
+            sshFile << "ssh -o \"StrictHostKeyChecking no\" -i ${sshBoundIdentityFile} ${sshBoundAddress} 'bash -s' < ${filename}\n"
+            def shReturn = shell("${filename}.ssh")
+            sshFile.delete()
+            return shReturn
+        } else {
+            return shell("${filename}")
+        }
+    }
+
+    public static def ssh(sshAddressString, identityFile, closure) {
+        def prevSsh = isInsideSshClosure
+        def prevBoundAddress = sshBoundAddress
+        def prevBoundIdentityFile = sshBoundIdentityFile
+        isInsideSshClosure = true
+        sshBoundAddress = sshAddressString
+        sshBoundIdentityFile = identityFile
+        closure()
+        isInsideSshClosure = prevSsh
+        sshBoundAddress = prevBoundAddress
+        sshBoundIdentityFile = prevBoundIdentityFile
     }
     
-    public static def shell(command) {
+    public static def shell(command, shouldPrint = true) {
         StringBuilder stdOut = new StringBuilder()
         StringBuilder stdErr = new StringBuilder()
         int exitCode = 1

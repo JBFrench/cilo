@@ -441,7 +441,7 @@ secretCommand() {
             type=$3
             value=$4
             tempfile="$CILO_TEMP_DIRECTORY/$name"
-            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}"]; then
+            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}" ]; then
                 showSecretUsage
             fi
             case $type in
@@ -479,7 +479,7 @@ secretCommand() {
             type=$3
             value=$4
             tempfile="$CILO_TEMP_DIRECTORY/$name"
-            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}"]; then
+            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}" ]; then
                 showSecretUsage
             fi
             case $type in
