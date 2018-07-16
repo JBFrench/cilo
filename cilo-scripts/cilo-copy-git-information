@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+VCS_INFO_FILE=$HOME/.cilo/tmp/VCS_INFO
+BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
+COMMIT_HASH=$(git rev-parse @)
+
+echo "[GIT]" > $VCS_INFO_FILE
+echo "GIT_BRANCH_NAME=$BRANCH_NAME" >> $VCS_INFO_FILE
+echo "GIT_COMMIT_HASH=$COMMIT_HASH" >> $VCS_INFO_FILE
+
+#checkUpToDate
+
+checkUpToDate() {
+    UPSTREAM=${1:-'@{u}'} #Find a way to get actual upstream remote.
+    LOCAL=$(git rev-parse @)
+    REMOTE=$(git rev-parse "$UPSTREAM")
+    BASE=$(git merge-base @ "$UPSTREAM")
+
+    if [ $LOCAL = $REMOTE ]; then
+        # Add branch info to 
+        # Add commit hash info to $HOME/.cilo/tmp/VCS_INFO
+        echo "branch"
+    elif [ $LOCAL = $BASE ]; then
+        echo "Can not build. Your local git repository is not up to date."
+        exit 1;
+    elif [ $REMOTE = $BASE ]; then
+        echo "Can not build. Your local git repository has uncommitted changes."
+        exit 1;       
+    else
+        echo "Can not build. Your local git repository is out of synch."
+        exit 1;
+    fi
+}

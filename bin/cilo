@@ -360,6 +360,7 @@ runCommand() {
         exit 1
     fi
     validateDocker
+    copyGitInformation
     runCiloScript "cilo-run-pipeline"
     exit 0
 }
@@ -777,6 +778,23 @@ doBinariesExist() {
             exit 1
         fi
     done
+}
+
+copyGitInformation() {
+    if $VERBOSE; then
+        info "%s\n" "Copying git information to $HOME/.cilo/tmp/VCS_INFO"
+    fi
+    if $VVV; then
+        $PWD/cilo-scripts/cilo-copy-git-information
+    else
+        $PWD/cilo-scripts/cilo-copy-git-information > /dev/null 2>&1
+    fi
+    if ! [ "$(($?))" -eq "0" ]; then
+        error "Something went wrong with copying git information."
+    fi
+    if $VERBOSE; then
+        info "%s\n" "Copy of git information complete."
+    fi
 }
 
 dockerGet() {
