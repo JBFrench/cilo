@@ -1,24 +1,32 @@
 import org.codehaus.groovy.control.CompilerConfiguration
+import java.util.regex.*;
 
 abstract class CiloBaseScript extends Script {
     abstract def runCode()
 
-    private static Boolean firstRun = true;
-    public static def steps = [:]
-    public static def secretsMap = [:]
-    public static def envMap = [:]
-    
+    private static def dockerEnv = System.getenv()
+    private static def BUILD_NUMBER
 
-    public static def stdOutInterceptor
-    public static def stdErrInterceptor
+    private static Boolean firstRun = true;
+    private static def steps = [:]
+    private static def secretsMap = [:]
+    private static def envMap = [:]
+    
+    private static def isInsideSshClosure = false
+    private static def sshBoundAddress
+    private static def sshBoundIdentityFile
+
+    private static def stdOutInterceptor
+    private static def stdErrInterceptor
     
     // used by macro processor
-    public static def stdMap = [:]
-    public static def stdOut = ""
-    public static def stdErr = ""
-    public static def exitCode = 0
+    protected static def stdMap = [:]
+    protected static def stdOut = ""
+    protected static def stdErr = ""
+    protected static def exitCode = 0
     
     def run() {
+        BUILD_NUMBER = dockerEnv["BUILD_NUMBER"].toInteger()
         if (firstRun) {
             firstRun = false
         } else {
@@ -26,13 +34,14 @@ abstract class CiloBaseScript extends Script {
         }
         // Secret Interception
         def interceptorClosure = { secretsMap, str ->
-            def newString=str
+            def newString = str
             for (pair in secretsMap) {
                 def key = pair.key;
-                def value = pair.value;
+                def value = pair.value.trim();
                 def valueArray = value.split('\n')
                 for (valueLine in valueArray) {
-                    newString = newString.replace(valueLine.trim(), "********")
+                    def trimmed = valueLine.trim()
+                    newString = newString.replace(trimmed, "********")
                 }
             }
             return newString;
@@ -46,7 +55,13 @@ abstract class CiloBaseScript extends Script {
         try {
             final result = runCode()
             for (step in steps) {
-                println "----------------------------STEP (${step.key})-------------------------------------------"
+                def stepString = "${step.key}"
+                def lineCount = 80-stepString.length()
+                def line = "-".multiply(lineCount)
+                println "-".multiply(80)
+                println "-".multiply(76)+"STEP"
+                println "${line}${stepString}"
+                println "-".multiply(80)
                 beforeEachStep()
                 step.value() // run closure
                 afterEachStep()
@@ -80,11 +95,38 @@ abstract class CiloBaseScript extends Script {
     }
                     
     public static def ciloShellScript(filename) {
-        shell("chmod 777 $filename")
-        return shell("$filename")
+        shell("chmod 700 $filename")
+        if (isInsideSshClosure) {
+            shell("touch ${filename}.ssh", false)
+            shell("chmod 700 ${filename}.ssh", false)
+            def sshFile = new File("${filename}.ssh")
+            sshFile << "#!/usr/bin/env sh\n"
+            sshFile << "ssh -o \"StrictHostKeyChecking no\" -i ${sshBoundIdentityFile} ${sshBoundAddress} 'bash -s' < ${filename}\n"
+            // TODO: pass envMap through ssh.
+            //  StackOverflow: https://stackoverflow.com/questions/4409951/can-i-forward-env-variables-over-ssh
+            println "Attempting to run ssh script at \"${sshBoundAddress}\" using identity \"${sshBoundIdentityFile}\""
+            def shReturn = shell("${filename}.ssh")
+            sshFile.delete()
+            return shReturn
+        } else {
+            return shell("${filename}")
+        }
+    }
+
+    public static def ssh(sshAddressString, identityFile, closure) {
+        def prevSsh = isInsideSshClosure
+        def prevBoundAddress = sshBoundAddress
+        def prevBoundIdentityFile = sshBoundIdentityFile
+        isInsideSshClosure = true
+        sshBoundAddress = sshAddressString
+        sshBoundIdentityFile = identityFile
+        closure()
+        isInsideSshClosure = prevSsh
+        sshBoundAddress = prevBoundAddress
+        sshBoundIdentityFile = prevBoundIdentityFile
     }
     
-    public static def shell(command) {
+    public static def shell(command, shouldPrint = true) {
         StringBuilder stdOut = new StringBuilder()
         StringBuilder stdErr = new StringBuilder()
         int exitCode = 1
@@ -97,10 +139,11 @@ abstract class CiloBaseScript extends Script {
             def newString=line
             for (pair in secretsMap) {
                 def key = pair.key;
-                def value = pair.value;
+                def value = pair.value.trim();
                 def valueArray = value.split('\n')
                 for (valueLine in valueArray) {
-                    newString = newString.replace(valueLine.trim(), "********")
+                    def trimmed = valueLine.trim()
+                    newString = newString.replace(trimmed, "********")
                 }
             }
             stdOut.append(line)
@@ -124,37 +167,54 @@ abstract class CiloBaseScript extends Script {
         for (pair in map) {
             def key=pair.key
             def value=pair.value
-            envMap -= ["${key}":"${value}"]
+            envMap.remove("${key}")
         }
     }
-    
-    public static def secret(name, closure) {
-        shell("cilo-decrypt-secret ${name}")
-        def nameText = "${name}Text"
-        def nameBytes = "${name}Bytes"
-        def nameFile = "${name}File"
-        def secretFile = new File("/home/cilo/secret/${name}")
-        if (secretFile == null || secretFile.length() <= 0) {
-          throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
-        }
-        def secretBytes = secretFile.getBytes()
-        def secretText = secretFile.getText()
+
+    public static def secrets(namesMap, closure) {
         def binding = new Binding()
-        secretsMap << ["${name}":"${secretText}"]
-        secretsMap << ["${nameText}":"${secretText}"]
-        secretsMap << ["${nameBytes}":"${secretBytes}"]
-        secretsMap << ["${nameFile}":"/home/cilo/secret/${name}"]
-        for (secretPair in secretsMap) {
-            binding.setVariable(secretPair.key, secretPair.value)
+        for (name in namesMap) {
+            shell("cilo-decrypt-secret ${name}")
+            def nameText = "${name}Text"
+            def nameBytes = "${name}Bytes"
+            def nameFile = "${name}File"
+            def secretFile = new File("/home/cilo/secret/${name}")
+            if (secretFile == null || secretFile.length() <= 0) {
+                throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
+            }
+            def secretBytes = secretFile.getBytes()
+            def secretText = secretFile.getText()
+            secretsMap << ["${name}":"${secretText}"]
+            secretsMap << ["${nameText}":"${secretText}"]
+            secretsMap << ["${nameBytes}":"${secretBytes}"]
+            secretsMap << ["${nameFile}":"/home/cilo/secret/${name}"]
+            for (secretPair in secretsMap) {
+                binding.setVariable(secretPair.key, secretPair.value)
+            }
         }
         closure.delegate = this;
         closure.setBinding(binding)
         closure.call()
-        secretsMap -= ["${name}":"${secretText}"]
-        secretsMap -= ["${nameText}":"${secretText}"]
-        secretsMap -= ["${nameBytes}":"${secretBytes}"]
-        secretsMap -= ["${nameFile}":"/home/cilo/secret/${name}"]
-        shell("rm /home/cilo/secret/${name}")
+        for (name in namesMap) {
+            def nameText = "${name}Text"
+            def nameBytes = "${name}Bytes"
+            def nameFile = "${name}File"
+            def secretFile = new File("/home/cilo/secret/${name}")
+            if (secretFile == null || secretFile.length() <= 0) {
+                throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
+            }
+            def secretBytes = secretFile.getBytes()
+            def secretText = secretFile.getText()
+            secretsMap.remove("${name}")
+            secretsMap.remove("${nameText}")
+            secretsMap.remove("${nameBytes}")
+            secretsMap.remove("${nameFile}")
+            shell("rm /home/cilo/secret/${name}")
+        }
+    }
+    
+    public static def secret(name, closure) {
+        secrets([name], closure)
     }
 }
 

@@ -21,3 +21,4 @@ public static def echoStringIntegratedStatic(string) {
     }
     return stdOut
 }
+

@@ -186,7 +186,6 @@ EOF`
 EOF`
     
     PWD=`pwd`
-    PROJECT_NAME="cilo" # todo: get from git or filestructure
     PIPELINE=()
     COMMAND=()
     INTERACTIVE="true"
@@ -205,12 +204,20 @@ EOF`
     CILO_TEMP_DIRECTORY="$HOME/.cilo/tmp"
     CILO_SECRET_DIRECTORY="$HOME/.cilo/secret"
 
+    PROJECT_NAME="cilo" # todo: get from git or filestructure
+    USER=""
+    VC_PROJCET=""
+    VC_BRANCH=""
+    VC_COMMIT=""
+    BUILD_NUMBER="0"
+
     parseConfig
     parseArgs $@ # can spin off to different command and exit
 
     logInit
     computeDependencies
     ensure
+    syncProjectVariables
     executeCommand $COMMAND
 }
 
@@ -411,6 +418,9 @@ ensureCiloDirectories() {
     if ! [ -d "$HOME/.cilo/" ]; then
         mkdir -p "$HOME/.cilo/"
     fi
+    if ! [ -d "$PWD/.cilo/" ]; then
+        mkdir -p "$PWD/.cilo/"
+    fi
     if ! [ -d "$CILO_TEMP_DIRECTORY" ]; then
         mkdir -p "$CILO_TEMP_DIRECTORY"
     fi
@@ -428,6 +438,16 @@ ensurePassword() {
     fi
 }
 
+syncProjectVariables() {
+    if [ -e "$PWD/.cilo/build_number" ]; then
+        BUILD_NUMBER=$(head -n1 "$PWD/.cilo/build_number")
+        BUILD_NUMBER=$((BUILD_NUMBER+1))
+    else
+        BUILD_NUMBER="1"
+    fi
+    printf "%s\n" "${BUILD_NUMBER}" > "$PWD/.cilo/build_number"
+}
+
 getCiloPasswordHash() {
     cat "$HOME/.cilo/password.hash" | tr -d '\n' | tr -d '\r'
 }
@@ -442,7 +462,7 @@ secretCommand() {
             type=$3
             value=$4
             tempfile="$CILO_TEMP_DIRECTORY/$name"
-            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}"]; then
+            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}" ]; then
                 showSecretUsage
             fi
             case $type in
@@ -480,7 +500,7 @@ secretCommand() {
             type=$3
             value=$4
             tempfile="$CILO_TEMP_DIRECTORY/$name"
-            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}"]; then
+            if [ -z "${name+1}" ] || [ -z "${type+1}" ] || [ -z "${value+1}" ]; then
                 showSecretUsage
             fi
             case $type in
@@ -882,7 +902,7 @@ dockerRunImage() {
             if ! [ "$file" = '*' ]; then
                 filename=`basename $file`
                 if $VERBOSE; then info "\t%s\n" "$filename"; fi
-                cp "$file" "$CILO_TEMP_DIRECTORY/$filename" > /dev/null 2> /dev/null
+                cp "$file" "${CILO_TEMP_DIRECTORY}/${filename}.enc" > /dev/null 2> /dev/null
             fi
         done
         # encrypt secrets using generated token
@@ -890,16 +910,18 @@ dockerRunImage() {
         docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" --name "cilo-encrypt-temporary" -e SECRET_KEY="$SECRET_KEY" -e USER_KEY="$USER_KEY" "$1" "cilo-encrypt-temporary"
         # run actual cilo docker
         if $VERBOSE; then info "%s\n" "Starting docker image ($1)."; fi
+        log '================================================================================\n' "" ""
         if [ "$3" = "cilo-run-pipeline" ]; then
-            log '===================================RUNNING PIPELINE=================================\n' "" ""
+            log '===================================RUNNING PIPELINE=============================\n' "" ""
         else
             if [ "$3" = "bash" ]; then
-                log '===================================RUNNING SHELL====================================\n' "" ""
+                log '===================================RUNNING SHELL==============================\n' "" ""
             else
-                log '===================================RUNNING SCRIPT===================================\n' "" ""
+                log '===================================RUNNING SCRIPT===============================\n' "" ""
             fi
         fi
-        docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" -v "$PWD:/home/cilo/workspace" --name "$2" $ENTRYPOINT -e SECRET_KEY="$SECRET_KEY" -e LIBRARY_PATH="$LIBRARY_PATH" -e CILO_PIPELINE="$PIPELINE" "$1"
+        log '================================================================================\n' "" ""
+        docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" -v "$PWD:/home/cilo/workspace" --name "$2" $ENTRYPOINT -e SECRET_KEY="$SECRET_KEY" -e LIBRARY_PATH="$LIBRARY_PATH" -e CILO_PIPELINE="$PIPELINE" -e BUILD_NUMBER="$BUILD_NUMBER" "$1"
     fi
 }
 

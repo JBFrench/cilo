@@ -102,6 +102,36 @@ step "Bash Secret", {
      }
 }
 
+step "Multiple Secrets", {
+    secrets(["username", "password", "cirrosoftAwsServerTestAddress"]) {
+            println "username: ${username}"
+            println "password: ${usernameText}"
+            println "cirrosoftAwsServerTestTddress: ${cirrosoftAwsServerTestAddress}"
+    }
+}
+
+step "All Secrets", {
+    secrets(["username", "password", "cirrosoftAwsServerTestAddress", "cirrosoftAwsPem"]) {
+        println "Secret------: ${username}"
+        println "Secret Text-: ${usernameText}"
+        println "Secret Bytes: ${usernameBytes}"
+        println "Secret File-: ${usernameFile}"
+        $ echo "From shell-------Secret: $password"
+        $ echo "From shell--Secret Text: $passwordText"
+        $ echo "From shell-Secret Bytes: $passwordBytes"
+        $ echo "From shell--Secret File: $passwordFile"
+        println "cirrosoftAwsServerTestAddress------: ${cirrosoftAwsServerTestAddress}"
+        println "cirrosoftAwsServerTestAddressBytes-: ${cirrosoftAwsServerTestAddressBytes}"
+        println "cirrosoftAwsServerTestAddressText--: ${cirrosoftAwsServerTestAddressText}"
+        println "cirrosoftAwsServerTestAddressFile--: ${cirrosoftAwsServerTestAddressFile}"
+        println "cirrosoftAwsPem--------------------: ${cirrosoftAwsPem}"
+        println "cirrosoftAwsPemBytes---------------: ${cirrosoftAwsPemBytes}"
+        println "cirrosoftAwsPemText----------------: ${cirrosoftAwsPemText}"
+        println "cirrosoftAwsPemFile----------------: ${cirrosoftAwsPemFile}"
+    }
+}
+
+
 step "Nested Secrets", {
      secret "username", {
             secret "password", {
@@ -157,6 +187,12 @@ step "Variable Scope Combos", {
     }
 }
 
+step "Build Environment", {
+    println "BUILD_NUMBER: ${BUILD_NUMBER}"
+    println "BASH ENV:"
+    $ env
+}
+
 step "Library Function", {
     def functions = new Functions()
     def string = functions.echoString("Cilo library works!")
@@ -203,6 +239,33 @@ step "Library Jar", {
     capitalCountryBiMap.put("Washington, D.C.", "USA");
     capitalCountryBiMap.put("Moscow", "Russia");
     String russia = capitalCountryBiMap.get("Moscow")
-    println "${russia} is the capital of Moscow."
+    println "Moscow is the capital of ${russia}."
+}
+
+step "Groovy Secret 2", {
+     secret "username", {
+            println "Secret------: ${username}"
+            println "Secret Text-: ${usernameText}"
+            println "Secret Bytes: ${usernameBytes}"
+            println "Secret File-: ${usernameFile}"
+     }
+}
+
+step "Bash Secret 2", {
+     secret "password", {
+            $ echo "From shell-------Secret: $password"
+            $ echo "From shell--Secret Text: $passwordText"
+            $ echo "From shell-Secret Bytes: $passwordBytes"
+            $ echo "From shell--Secret File: $passwordFile"
+     }
+}
+
+step "SSH", {
+    secrets(["cirrosoftAwsServerTestAddress", "cirrosoftAwsPem"]) {
+        ssh("ec2-user@${cirrosoftAwsServerTestAddress}", "${cirrosoftAwsPemFile}") {
+            $ uname -a
+            $ env
+        }
+    }
 }
 
