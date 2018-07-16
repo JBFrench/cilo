@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VCS_INFO_FILE=.cilo/VCS_INFO
+VCS_INFO_FILE=$HOME/.cilo/VCS_INFO
 BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
 COMMIT_HASH=$(git rev-parse @)
 

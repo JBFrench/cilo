@@ -802,7 +802,7 @@ doBinariesExist() {
 
 copyGitInformation() {
     if $VERBOSE; then
-        info "%s\n" "Copying git information to $HOME/.cilo/tmp/VCS_INFO"
+        info "%s\n" "Copying git information."
     fi
     if $VVV; then
         $PWD/cilo-scripts/cilo-copy-git-information
