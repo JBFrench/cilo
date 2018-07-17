@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-VCS_INFO_FILE=$HOME/.cilo/VCS_INFO
-BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
-COMMIT_HASH=$(git rev-parse @)
-
-echo "[GIT]" > $VCS_INFO_FILE
-echo "GIT_BRANCH_NAME=$BRANCH_NAME" >> $VCS_INFO_FILE
-echo "GIT_COMMIT_HASH=$COMMIT_HASH" >> $VCS_INFO_FILE
