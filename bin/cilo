@@ -35,7 +35,7 @@ main() {
                         DEFAULT:   /var/run/docker.sock
                         NOTE:      Follows same rules as --unix-socket from curl.
 
-                --i|--image
+                -i|--image <image-name>
                         Name of docker image used to build.
                         DEFAULT:   cilo
                         NOTE:      Must inherit from cilo's image.
