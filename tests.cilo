@@ -1,4 +1,3 @@
-
 import com.cirrosoft.*
 import com.google.common.collect.HashBiMap
 
@@ -82,6 +81,11 @@ step "Variable Scope", {
         println "Inner: ${outer}"
         println "Outer: ${inner}"
     }
+}
+
+step "Git Information", {
+    println "Branch Name: ${Git.branch_name}"
+    println "Commit Hash: ${Git.commit_hash}"
 }
 
 step "Groovy Secret", {

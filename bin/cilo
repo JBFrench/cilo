@@ -807,11 +807,13 @@ copyGitInformation() {
         info "%s\n" "Copying git information."
     fi
 
+    rm $PWD/.cilo/*.git
+    
     BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
     COMMIT_HASH=`cat .git/refs/heads/$BRANCH_NAME`   
     
-    printf "%s\n" "GIT_BRANCH_NAME=$BRANCH_NAME" >> "$PWD/.cilo/BRANCH_NAME.git"
-    printf "%s\n" "GIT_COMMIT_HASH=$COMMIT_HASH" >> "$PWD/.cilo/COMMIT_HASH.git"
+    printf "%s\n" "$BRANCH_NAME" >> "$PWD/.cilo/branch_name.git"
+    printf "%s\n" "$COMMIT_HASH" >> "$PWD/.cilo/commit_hash.git"
 
     if ! [ "$(($?))" -eq "0" ]; then
         error "Something went wrong with copying git information."
