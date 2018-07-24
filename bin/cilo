@@ -204,6 +204,7 @@ EOF`
     CILO_TEMP_DIRECTORY="$HOME/.cilo/tmp"
     CILO_SECRET_DIRECTORY="$HOME/.cilo/secret"
 
+
     PROJECT_NAME="cilo" # todo: get from git or filestructure
     USER=""
     VC_PROJCET=""
@@ -367,6 +368,7 @@ runCommand() {
         exit 1
     fi
     validateDocker
+    copyGitInformation
     runCiloScript "cilo-run-pipeline"
     exit 0
 }
@@ -798,6 +800,24 @@ doBinariesExist() {
             exit 1
         fi
     done
+}
+
+copyGitInformation() {
+    if $VERBOSE; then
+        info "%s\n" "Copying git information."
+    fi
+
+    rm $PWD/.cilo/*.git
+    
+    BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
+    COMMIT_HASH=`cat .git/refs/heads/$BRANCH_NAME`   
+    
+    printf "%s\n" "$BRANCH_NAME" >> "$PWD/.cilo/branch_name.git"
+    printf "%s\n" "$COMMIT_HASH" >> "$PWD/.cilo/commit_hash.git"
+
+    if ! [ "$(($?))" -eq "0" ]; then
+        error "Something went wrong with copying git information."
+    fi   
 }
 
 dockerGet() {

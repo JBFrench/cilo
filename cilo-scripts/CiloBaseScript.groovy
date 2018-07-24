@@ -1,6 +1,3 @@
-import org.codehaus.groovy.control.CompilerConfiguration
-import java.util.regex.*;
-
 abstract class CiloBaseScript extends Script {
     abstract def runCode()
 
@@ -11,6 +8,8 @@ abstract class CiloBaseScript extends Script {
     private static def steps = [:]
     private static def secretsMap = [:]
     private static def envMap = [:]
+
+    public static def Git = [:]
     
     private static def isInsideSshClosure = false
     private static def sshBoundAddress
@@ -25,7 +24,7 @@ abstract class CiloBaseScript extends Script {
     protected static def stdErr = ""
     protected static def exitCode = 0
     
-    def run() {
+    def run() {       
         BUILD_NUMBER = dockerEnv["BUILD_NUMBER"].toInteger()
         if (firstRun) {
             firstRun = false
@@ -50,7 +49,9 @@ abstract class CiloBaseScript extends Script {
         stdErrInterceptor = new SecretInterceptor(secretsMap, interceptorClosure, false)
         stdOutInterceptor.start()
         stdErrInterceptor.start()
-        
+
+        collectGitInformation()
+
         beforePipeline()
         try {
             final result = runCode()
@@ -110,6 +111,15 @@ abstract class CiloBaseScript extends Script {
             return shReturn
         } else {
             return shell("${filename}")
+        }
+    }
+
+    private static def collectGitInformation() {
+        def files = new File(".cilo").listFiles()
+        for (file in files) {
+            if (file.getName().endsWith(".git")) {
+                Git.put(file.getName().substring(0, file.getName().lastIndexOf(".")), file.getText())
+            }
         }
     }
 
