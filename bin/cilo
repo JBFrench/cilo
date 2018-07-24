@@ -493,6 +493,7 @@ secretCommand() {
                 showSecretUsage
             fi
             secretCommandRead "$name"
+            printf "\n"
             ;;
         update)
             name=$2

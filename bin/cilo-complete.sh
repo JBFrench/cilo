@@ -111,7 +111,7 @@ __cilo_complete_wrapper() {
             return 0
             ;;
         secret)
-            options="create read update delete"
+            options="list create read update delete"
             COMPREPLY=( $(compgen -W "${options}" -- ${current}) )
             return 0
             ;;
