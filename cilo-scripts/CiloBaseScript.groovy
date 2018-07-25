@@ -9,7 +9,7 @@ abstract class CiloBaseScript extends Script {
     private static def secretsMap = [:]
     private static def envMap = [:]
 
-    public static def Git = [:]
+    public static def git = [:]
     
     private static def isInsideSshClosure = false
     private static def sshBoundAddress
@@ -115,12 +115,12 @@ abstract class CiloBaseScript extends Script {
     }
 
     private static def collectGitInformation() {
-        def files = new File(".cilo").listFiles()
-        for (file in files) {
-            if (file.getName().endsWith(".git")) {
-                Git.put(file.getName().substring(0, file.getName().lastIndexOf(".")), file.getText())
-            }
+      def files = new File(".cilo").listFiles()
+      for (file in files) {
+        if (file.getName().endsWith(".git")) {
+          git.put(file.getName().substring(0, file.getName().lastIndexOf(".")), file.getText())
         }
+      }
     }
 
     public static def ssh(sshAddressString, identityFile, closure) {
