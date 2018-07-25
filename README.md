@@ -13,7 +13,7 @@ The goal of __Cilo__ is to give developers the ability to build and deploy appli
   ...
 
 ## Use
-`
+```
 cilo run tests.cilo
-`
+```
   
