@@ -84,8 +84,8 @@ step "Variable Scope", {
 }
 
 step "Git Information", {
-    println "Branch Name: ${Git.branch_name}"
-    println "Commit Hash: ${Git.commit_hash}"
+    println "Branch Name: ${git.branchName}"
+    println "Commit Hash: ${git.commitHash}"
 }
 
 step "Groovy Secret", {
