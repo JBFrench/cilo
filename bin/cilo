@@ -412,7 +412,7 @@ secretGetInput() {
 
 ensure() {
     ensureCiloDirectories
-    ensurePassword
+    ensureIdentity
 }
 
 ensureCiloDirectories() {
@@ -428,13 +428,16 @@ ensureCiloDirectories() {
     if ! [ -d "$CILO_SECRET_DIRECTORY" ]; then
         mkdir -p "$CILO_SECRET_DIRECTORY"
     fi
+    if ! [ -d "$CILO_SECRET_DIRECTORY/local" ]; then
+        mkdir -p "$CILO_SECRET_DIRECTORY/local"
+    fi
 }
 
-ensurePassword() {
-    if ! [ -e "$HOME/.cilo/password.hash" ]; then
+ensureIdentity() {
+    if ! [ -e "${CILO_SECRET_DIRECTORY}/local/password.hash" ]; then
         local password="password"
         read -s -p "Cilo Secrets Password: " password
-        hashString "$password" > "$HOME/.cilo/password.hash"
+        hashString "$password" > "${CILO_SECRET_DIRECTORY}/local/password.hash"
         echo
     fi
 }
@@ -450,7 +453,7 @@ syncProjectVariables() {
 }
 
 getCiloPasswordHash() {
-    cat "$HOME/.cilo/password.hash" | tr -d '\n' | tr -d '\r'
+    cat "${CILO_SECRET_DIRECTORY}/local/password.hash" | tr -d '\n' | tr -d '\r'
 }
 
 secretCommand() {
@@ -583,7 +586,7 @@ secretCommandCreate() {
     name="$1"
     filename="$2"
     mountTemp="/home/cilo/tmp"
-    if [ -e "$CILO_SECRET_DIRECTORY/$name" ]; then
+    if [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) already exists."
         exit 1;
     fi
@@ -591,13 +594,13 @@ secretCommandCreate() {
         error "%s\n" "Secret by the name of ($name) does not have a binary file ($filename) to load."
         exit 1;
     fi
-    encryptFile "$filename" > "$CILO_SECRET_DIRECTORY/$name"
+    encryptFile "$filename" > "${CILO_SECRET_DIRECTORY}/local/${name}.enc"
     log "%s\n" "Secret Added ($name)."
 }
 
 secretCommandRead() {
     name="$1"
-    filename="$CILO_SECRET_DIRECTORY/$name"
+    filename="$CILO_SECRET_DIRECTORY/local/${name}.enc"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
         exit 1;
@@ -609,7 +612,7 @@ secretCommandUpdate() {
     name="$1"
     filename="$2"
     mountTemp="/home/cilo/tmp"
-    if ! [ -e "$CILO_SECRET_DIRECTORY/$name" ]; then
+    if ! [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) does not exists."
         exit 1;
     fi
@@ -617,13 +620,13 @@ secretCommandUpdate() {
         error "%s\n" "Secret by the name of ($name) does not have a binary file ($filename) to load."
         exit 1;
     fi
-    encryptFile "$filename" > "$CILO_SECRET_DIRECTORY/$name"
+    encryptFile "$filename" > "${CILO_SECRET_DIRECTORY}/local/${name}.enc"
     log "%s\n" "Secret updated ($name)."
 }
 
 secretCommandDelete() {
     name="$1"
-    filename="$CILO_SECRET_DIRECTORY/$name"
+    filename="${CILO_SECRET_DIRECTORY}/local/${name}.enc"
     mountTemp="/home/cilo/tmp"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
@@ -661,9 +664,13 @@ getPropertiesFromFile() {
 }
 
 listSecretDirectory() {
-    for filename in $CILO_SECRET_DIRECTORY/*; do
-        if ! [ "$filename" = '*' ]; then
-            basename $filename
+    for file in ${CILO_SECRET_DIRECTORY}/local/*.enc; do
+        if ! [ "$file" = "${CILO_SECRET_DIRECTORY}/local/*.enc" ]; then
+            dirname=`dirname $file`
+            basename=`basename $file`
+            extension="${basename##*.}"
+            filename="${basename%.*}"
+            printf "%s\n" "$filename"
         fi
     done
 }
@@ -901,7 +908,7 @@ dockerRunImage() {
         local SECRET_KEY=`hashRandom`
         if $VERBOSE; then info "%s\n" "Preparing secrets:"; fi
         rm $CILO_TEMP_DIRECTORY/* 2> /dev/null
-        for file in $CILO_SECRET_DIRECTORY/*; do
+        for file in $CILO_SECRET_DIRECTORY/local/*.enc; do
             if ! [ "$file" = '*' ]; then
                 filename=`basename $file`
                 if $VERBOSE; then info "\t%s\n" "$filename"; fi

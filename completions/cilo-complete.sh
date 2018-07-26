@@ -34,7 +34,7 @@ __cilo_complete_wrapper() {
         secret)
             CILO_SECRET_DIRECTORY="$HOME/.cilo/secret"
             local secrets=""
-            for file in $CILO_SECRET_DIRECTORY/*; do
+            for file in ${CILO_SECRET_DIRECTORY}/local/*.enc; do
                 if ! [ -d "$file" ]; then
                     if ! [ "$file" = '*' ]; then
                         dirname=`dirname $file`
