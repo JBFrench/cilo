@@ -819,8 +819,8 @@ copyGitInformation() {
     BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
     COMMIT_HASH=`cat .git/refs/heads/$BRANCH_NAME`   
     
-    printf "%s\n" "$BRANCH_NAME" >> "$PWD/.cilo/branch_name.git"
-    printf "%s\n" "$COMMIT_HASH" >> "$PWD/.cilo/commit_hash.git"
+    printf "%s\n" "$BRANCH_NAME" >> "$PWD/.cilo/branchName.git"
+    printf "%s\n" "$COMMIT_HASH" >> "$PWD/.cilo/commitHash.git"
 
     if ! [ "$(($?))" -eq "0" ]; then
         error "Something went wrong with copying git information."
