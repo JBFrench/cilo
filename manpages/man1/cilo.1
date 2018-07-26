@@ -141,10 +141,36 @@ Inside of this scope their are three new variables: awsAutomationToken, awsAutom
 awsAutomationTokenFile. Having a secret in a string is nice; but other forms are for when there
 is a need to have binary data accessible also. These variables are availible in groovy and bash.
 .SH            SECRET USAGE
-cilo [OPTIONS] secret create <name> (string <string> | file <file> | input)
-cilo [OPTIONS] secret read   <name>
-cilo [OPTIONS] secret update <name> (string <string> | file <file> | input)
-cilo [OPTIONS] secret delete <name>
+.B cilo
+.R [OPTIONS]
+.B secret create
+.R <name> (
+.B string
+.R <string> |
+.B file
+.R <file> |
+.B input )
+.PP
+.B cilo
+.R [OPTIONS]
+.B secret read
+.R <name>
+.PP
+.B cilo
+.R [OPTIONS]
+.B secret update
+.R <name> (
+.B string
+.R <string> |
+.B file
+.R <file> |
+.B input )
+.PP
+.B cilo
+.R [OPTIONS]
+.B secret delete
+.R <name>
+.PP
 .SH            SECRET DESCRIPTION
 .PP
 Cilo has the ability to manage two types of secrets.
