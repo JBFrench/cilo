@@ -1,3 +1,13 @@
-2. Organize org secrets' directory.
-3. support pulling from a different docker --registry.
-4. Cilo server client and endpoints.
+1. Organize org secrets' directory.
+2. Support pulling from a different docker --registry.
+3. Cilo server client and endpoints.
+   a. GET    /org/{org}/project/{project}/build/{number}
+   b. PUT    /org/{org}/project/{project}/build/{number}
+   c. POST   /org/{org}/project/{project}/build             (returns next number and starts build entry)
+   d. DELETE /org/{org}/project/{project}/build/{number}
+   e. GET    /org/{org}/project/{project}/build/{number}/log
+   f. PUT    /org/{org}/project/{project}/build/{number}/log
+   g. POST   /org/{org}/project/{project}/build/{number}/log
+   h. DELETE /org/{org}/project/{project}/build/{number}/log
+   i. GET    /org/{org}/role/{role}/secrets      (returns json with base64 encoded secrets per role)
+
