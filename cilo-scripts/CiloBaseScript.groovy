@@ -188,7 +188,7 @@ abstract class CiloBaseScript extends Script {
             def nameText = "${name}Text"
             def nameBytes = "${name}Bytes"
             def nameFile = "${name}File"
-            def secretFile = new File("/home/cilo/secret/${name}")
+            def secretFile = new File("/home/cilo/secret/local/${name}")
             if (secretFile == null || secretFile.length() <= 0) {
                 throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
             }
@@ -197,7 +197,7 @@ abstract class CiloBaseScript extends Script {
             secretsMap << ["${name}":"${secretText}"]
             secretsMap << ["${nameText}":"${secretText}"]
             secretsMap << ["${nameBytes}":"${secretBytes}"]
-            secretsMap << ["${nameFile}":"/home/cilo/secret/${name}"]
+            secretsMap << ["${nameFile}":"/home/cilo/secret/local/${name}"]
             for (secretPair in secretsMap) {
                 binding.setVariable(secretPair.key, secretPair.value)
             }
@@ -209,7 +209,7 @@ abstract class CiloBaseScript extends Script {
             def nameText = "${name}Text"
             def nameBytes = "${name}Bytes"
             def nameFile = "${name}File"
-            def secretFile = new File("/home/cilo/secret/${name}")
+            def secretFile = new File("/home/cilo/secret/local/${name}")
             if (secretFile == null || secretFile.length() <= 0) {
                 throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
             }
@@ -219,7 +219,7 @@ abstract class CiloBaseScript extends Script {
             secretsMap.remove("${nameText}")
             secretsMap.remove("${nameBytes}")
             secretsMap.remove("${nameFile}")
-            shell("rm /home/cilo/secret/${name}")
+            shell("rm /home/cilo/secret/local/${name}")
         }
     }
     

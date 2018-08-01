@@ -125,7 +125,7 @@ __cilo_complete_wrapper() {
             return 0
             ;;
         *)
-            options="run help version shell secret"
+            options="run version shell secret help"
             COMPREPLY=( $(compgen -W "${options}" -- ${current}) )
             return 0
             ;;

@@ -1,4 +1,3 @@
-1. Switch local secrets to use pem for rsa.
 2. Organize org secrets' directory.
 3. support pulling from a different docker --registry.
 4. Cilo server client and endpoints.
