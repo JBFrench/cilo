@@ -814,7 +814,7 @@ copyGitInformation() {
         info "%s\n" "Copying git information."
     fi
 
-    rm $PWD/.cilo/*.git
+    rm $PWD/.cilo/*.git > /dev/null 2> /dev/null
     
     BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
     COMMIT_HASH=`cat .git/refs/heads/$BRANCH_NAME`   
