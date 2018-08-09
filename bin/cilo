@@ -438,8 +438,17 @@ ensureCiloDirectories() {
 ensureIdentity() {
     if ! [ -e "${CILO_SECRET_DIRECTORY}/local/password.hash" ]; then
         local password="password"
+	echo
+	printf "%s\n" "Cilo password for local secrets has not been set. Please set password."
         read -s -p "Cilo Secrets Password: " password
         echo
+	false
+       	[[ $password =~ ^[A-Za-z0-9!@#$%^\&*\(\)+_=?.-]{8,}$ ]] && true
+	if ! [ "$?" = "0" ]; then
+		printf "%s\n" "Password must be at least 8 characters long and may only alphanumerics and these symbols !@#$%^&*()-=_+?."
+		exit 1
+	fi
+	runCiloBash "printf ' '"
         hashString "$password" > "${CILO_SECRET_DIRECTORY}/local/password.hash"
         info "%s\n" "Ensuring local secret consistency.";
         for file in $CILO_SECRET_DIRECTORY/local/*.enc; do
@@ -618,9 +627,23 @@ hashString() {
     runCiloBash "printf '%s' \"$1\" | openssl dgst -sha512 | cut -d ' ' -f2- | tr -d '\n' | tr -d '\r'"
 }
 
-secretCommandCreate() {
+matchesSecretPattern() {
+	return
+	false
+       	[[ $1 =~ ^[a-zA-Z][A-Za-z0-9_.-]*$ ]] && true
+	if ! [ "$?" = "0" ]; then
+		error "%s\n" "Secret name must be at least 1 character long, start with a letter, only contain alphanumerics and these symbols -_."
+		false
+		exit 1
+	else
+		true
+	fi
+}
+
+ secretCommandCreate() {
     name="$1"
     filename="$2"
+    matchesSecretPattern "$name"
     if [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) already exists."
         exit 1;
@@ -636,6 +659,7 @@ secretCommandCreate() {
 secretCommandRead() {
     name="$1"
     filename="$CILO_SECRET_DIRECTORY/local/${name}.enc"
+    matchesSecretPattern "$name"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
         exit 1;
@@ -646,6 +670,7 @@ secretCommandRead() {
 secretCommandUpdate() {
     name="$1"
     filename="$2"
+    matchesSecretPattern "$name"
     if ! [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) does not exists."
         exit 1;
@@ -661,6 +686,7 @@ secretCommandUpdate() {
 secretCommandDelete() {
     name="$1"
     filename="${CILO_SECRET_DIRECTORY}/local/${name}.enc"
+    matchesSecretPattern "$name"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
         exit 1;
