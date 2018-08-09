@@ -30,19 +30,10 @@ main() {
                 transmitted to a centrallized cilo server for CO (continuous operation).
 
            OPTIONS
-                -d|--docker-socket <docker-socker-filepath>
-                        Use custom docker socket for communicating with docker.
-                        DEFAULT:   /var/run/docker.sock
-                        NOTE:      Follows same rules as --unix-socket from curl.
-
                 -i|--image <image-name>
                         Name of docker image used to build.
                         DEFAULT:   cilo
                         NOTE:      Must inherit from cilo's image.
-
-                --interactive|--no-interactive
-                        Runs the project in interactive mode
-                        DEFAULT:   --interactive
 
                 -h|--help|--usage
                         Show usage
@@ -63,9 +54,6 @@ main() {
                         
                 --pull
                         Rebuilds or pulls latest docker image.
-
-                -r|--registry <image-registry-url>
-                        Use to get image from a differenct registry
 
                 -s|--server <cilo-server-url>
                        URL of your cilo server.
@@ -188,13 +176,13 @@ EOF`
     PWD=`pwd`
     PIPELINE=()
     COMMAND=()
-    INTERACTIVE="true"
+    # INTERACTIVE="true"
     VERBOSE="false"
     VVV="false"
     LOGGING="false"
     LOGGING_DIRECTORY="log/"
     DOCKER_SOCKET="/var/run/docker.sock"
-    DOCKER_REGISTRY_URL=""
+    # DOCKER_REGISTRY_URL=""
     DOCKER_IMAGE_NAME="cirrosoft/cilo"
     DOCKER_REBUILD="false"
     LIBRARY_PATH="cilib/"
@@ -254,10 +242,10 @@ parseArgs() {
                 VVV="true"
                 shift;
                 ;;
-            -d|--docker-socket)
-                DOCKER_SOCKET="$2"
-                shift; shift
-                ;;
+            # -d|--docker-socket)
+            #     DOCKER_SOCKET="$2"
+            #     shift; shift
+            #     ;;
             --pull)
                 DOCKER_REBUILD="true"
                 shift;
@@ -282,22 +270,22 @@ parseArgs() {
                 LOGGING_DIRECTORY="$2"
                 shift; shift;
                 ;;
-            --interactive)
-                INTERACTIVE="true"
-                shift;
-                ;;
-            --no-interactive)
-                INTERACTIVE="false"
-                shift;
-                ;;
+            # --interactive)
+            #     INTERACTIVE="true"
+            #     shift;
+            #     ;;
+            # --no-interactive)
+            #     INTERACTIVE="false"
+            #     shift;
+            #     ;;
             --i|--image)
                 DOCKER_IMAGE_NAME="$2"
                 shift; shift
                 ;;
-            -r|--registry)
-                DOCKER_REGISTRY_URL="$2"
-                shift; shift;
-                ;;
+            # -r|--registry)
+            #     DOCKER_REGISTRY_URL="$2"
+            #     shift; shift;
+            #     ;;
             -*)
                 printf "\n\t%s\n" "ERROR: Unknown option ($key)."
                 showUsage
@@ -707,13 +695,13 @@ getProperty() {
 getPropertiesFromFile() {
     local PROP_FILE="$1"
     if [ -f "$PROP_FILE" ]; then
-        var=(); var=`getProperty "$PROP_FILE" "INTERACTIVE"`;           INTERACTIVE="${var:-$INTERACTIVE}"
+        # var=(); var=`getProperty "$PROP_FILE" "INTERACTIVE"`;           INTERACTIVE="${var:-$INTERACTIVE}"
         var=(); var=`getProperty "$PROP_FILE" "VERBOSE"`;               VERBOSE="${var:-$VERBOSE}"
         var=(); var=`getProperty "$PROP_FILE" "VVV"`;                   VVV="${var:-$VVV}"
         var=(); var=`getProperty "$PROP_FILE" "LOGGING"`;               LOGGING="${var:-$LOGGING}"
         var=(); var=`getProperty "$PROP_FILE" "LOGGING_DIRECTORY"`;     LOGGING_DIRECTORY="${var:-$LOGGING_DIRECTORY}"
-        var=(); var=`getProperty "$PROP_FILE" "DOCKER_SOCKET"`;         DOCKER_SOCKET="${var:-$DOCKER_SOCKET}"
-        var=(); var=`getProperty "$PROP_FILE" "DOCKER_REGISTRY_URL"`;   DOCKER_REGISTRY_URL="${var:-$DOCKER_REGISTRY_URL}"
+        # var=(); var=`getProperty "$PROP_FILE" "DOCKER_SOCKET"`;         DOCKER_SOCKET="${var:-$DOCKER_SOCKET}"
+        # var=(); var=`getProperty "$PROP_FILE" "DOCKER_REGISTRY_URL"`;   DOCKER_REGISTRY_URL="${var:-$DOCKER_REGISTRY_URL}"
         var=(); var=`getProperty "$PROP_FILE" "DOCKER_IMAGE_NAME"`;     DOCKER_IMAGE_NAME="${var:-$DOCKER_IMAGE_NAME}"
         var=(); var=`getProperty "$PROP_FILE" "DOCKER_REBUILD"`;        DOCKER_REBUILD="${var:-$DOCKER_REBUILD}"
         var=(); var=`getProperty "$PROP_FILE" "LIBRARY_PATH"`;          LIBRARY_PATH="${var:-$LIBRARY_PATH}"
@@ -774,13 +762,13 @@ logInit() {
     if $VERBOSE; then
         info "PROJECT_NAME           = %s\n" "${PROJECT_NAME}"
         info "PWD                    = %s\n" "${PWD}"
-        info "INTERACTIVE            = %s\n" "${INTERACTIVE}"
+        # info "INTERACTIVE            = %s\n" "${INTERACTIVE}"
         info "VERBOSE                = %s\n" "${VERBOSE}"
         info "VVV                    = %s\n" "${VERBOSE}"
         info "LOGGING                = %s\n" "${LOGGING}"
         info "LOGGING_DIRECTORY      = %s\n" "${LOGGING_DIRECTORY}"
-        info "DOCKER_SOCKET          = %s\n" "${DOCKER_SOCKET}"
-        info "DOCKER_REGISTRY_URL    = %s\n" "${DOCKER_REGISTRY_URL}"
+        # info "DOCKER_SOCKET          = %s\n" "${DOCKER_SOCKET}"
+        # info "DOCKER_REGISTRY_URL    = %s\n" "${DOCKER_REGISTRY_URL}"
         info "DOCKER_IMAGE_NAME      = %s\n" "${DOCKER_IMAGE_NAME}"
         info "DOCKER_REBUILD         = %s\n" "${DOCKER_REBUILD}"
         info "LIBRARY_PATH           = %s\n" "${LIBRARY_PATH}"

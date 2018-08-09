@@ -41,20 +41,20 @@ the local host machine. Logs and build information can also be
 transmitted to a centrallized cilo server for CO (continuous operation).
 .SH            OPTIONS
 .PP
-.B -d|--docker-socket <docker-socker-filepath>
-        Use custom docker socket for communicating with docker.
-        DEFAULT:   /var/run/docker.sock
-        NOTE:      Follows same rules as --unix-socket from curl.
-.PP
+\" .B -d|--docker-socket <docker-socker-filepath>
+\"         Use custom docker socket for communicating with docker.
+\"         DEFAULT:   /var/run/docker.sock
+\"         NOTE:      Follows same rules as --unix-socket from curl.
+\" .PP
 .B -i|--image <image-name>
         Name of docker image used to build.
         DEFAULT:   cilo
         NOTE:      Must inherit from cilo's image.
 .PP
-.B --interactive|--no-interactive
-        Runs the project in interactive mode
-        DEFAULT:   --interactive
-.PP
+\" .B --interactive|--no-interactive
+\"         Runs the project in interactive mode
+\"         DEFAULT:   --interactive
+\" .PP
 .B -h|--help|--usage
         Show usage
 
@@ -75,9 +75,9 @@ transmitted to a centrallized cilo server for CO (continuous operation).
 .B --pull
         Rebuilds or pulls latest docker image.
 .PP
-.B -r|--registry <image-registry-url>
-        Use to get image from a differenct registry
-.PP
+\" .B -r|--registry <image-registry-url>
+\"         Use to get image from a differenct registry
+\" .PP
 .B -s|--server <cilo-server-url>
        URL of your cilo server.
 .PP

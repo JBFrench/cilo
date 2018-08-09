@@ -68,10 +68,10 @@ __cilo_complete_wrapper() {
     
     # AC for Options with arguments
     case "$previous" in
-        -d|--docker-socket)
-            options=""
-            return 0
-            ;;
+        # -d|--docker-socket)
+        #     options=""
+        #     return 0
+        #     ;;
         -i|--image)
             options=""
             return 0
@@ -84,10 +84,10 @@ __cilo_complete_wrapper() {
             options=""
             return 0
             ;;
-        -r|--registry)
-            options=""
-            return 0
-            ;;
+        # -r|--registry)
+        #     options=""
+        #     return 0
+        #     ;;
         -s|--server)
             options=""
             return 0
