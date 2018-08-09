@@ -204,7 +204,6 @@ EOF`
     CILO_TEMP_DIRECTORY="$HOME/.cilo/tmp"
     CILO_SECRET_DIRECTORY="$HOME/.cilo/secret"
 
-
     PROJECT_NAME="cilo" # todo: get from git or filestructure
     USER=""
     VC_PROJCET=""
@@ -425,6 +424,9 @@ ensureCiloDirectories() {
     if ! [ -d "$CILO_TEMP_DIRECTORY" ]; then
         mkdir -p "$CILO_TEMP_DIRECTORY"
     fi
+    if ! [ -d "$CILO_TEMP_DIRECTORY/secret/local/" ]; then
+        mkdir -p "$CILO_TEMP_DIRECTORY/secret/local/"
+    fi
     if ! [ -d "$CILO_SECRET_DIRECTORY" ]; then
         mkdir -p "$CILO_SECRET_DIRECTORY"
     fi
@@ -437,7 +439,24 @@ ensureIdentity() {
     if ! [ -e "${CILO_SECRET_DIRECTORY}/local/password.hash" ]; then
         local password="password"
         read -s -p "Cilo Secrets Password: " password
+        echo
         hashString "$password" > "${CILO_SECRET_DIRECTORY}/local/password.hash"
+        info "%s\n" "Ensuring local secret consistency.";
+        for file in $CILO_SECRET_DIRECTORY/local/*.enc; do
+            local dirname=`dirname $file`
+            local basename=`basename $file`
+            local extension="${basename##*.}"
+            local filename="${basename%.*}"
+            if ! [ "$file" = "$CILO_SECRET_DIRECTORY/local/*.enc" ]; then
+                info "%s\n" "Verifying password with secret (${filename}).";
+                verifyPasswordForFile "$file"
+                if ! [ "$?" = "0" ]; then
+                    rm "${CILO_SECRET_DIRECTORY}/local/password.hash" > /dev/null 2> /dev/null
+                    error "%s\n" "Password does not match secret (${filename}). Either delete the secret or enter proper password."
+                    exit 1
+                fi
+            fi
+        done
         echo
     fi
 }
@@ -537,8 +556,24 @@ secretCommand() {
     exit 0
 }
 
+verifyPasswordForFile() {
+    local filename=encryptFile
+    local password=`getCiloPasswordHash`
+    if ! [ -z ${2+1} ]; then
+        password="$2"
+    fi
+    cp $1 $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
+    runCiloBash "cat /home/cilo/tmp/$filename | openssl enc -pass pass:\"$password\" -a -d -aes-256-cbc" | grep "bad decrypt" > /dev/null 2> /dev/null
+    if [ "$?" = "0" ]; then
+        rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
+        false
+        return
+    fi
+    rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
+}
+
 encryptFile() {
-    filename=encryptFile
+    local filename=encryptFile
     local password=`getCiloPasswordHash`
     if ! [ -z "${2+1}" ]; then
         password="$2"
@@ -553,7 +588,7 @@ encryptFile() {
 }
 
 decryptFile() {
-    filename=encryptFile
+    local filename=encryptFile
     local password=`getCiloPasswordHash`
     if ! [ -z ${2+1} ]; then
         password="$2"
@@ -561,6 +596,7 @@ decryptFile() {
     cp $1 $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
     runCiloBash "cat /home/cilo/tmp/$filename | openssl enc -pass pass:\"$password\" -a -d -aes-256-cbc"
     if ! [ "$?" = "0" ]; then
+        rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
         echo "Cilo password is not valid for secret ($name)."
         exit 1
     fi
@@ -572,7 +608,7 @@ hashRandom() {
 }
 
 hashFile() {
-    filename=encryptFile
+    local filename=encryptFile
     cp $1 $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
     runCiloBash "cat /home/cilo/tmp/$filename | openssl dgst -sha512 | cut -d ' ' -f2- | tr -d '\n' | tr -d '\r'"
     rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
@@ -585,7 +621,6 @@ hashString() {
 secretCommandCreate() {
     name="$1"
     filename="$2"
-    mountTemp="/home/cilo/tmp"
     if [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) already exists."
         exit 1;
@@ -611,7 +646,6 @@ secretCommandRead() {
 secretCommandUpdate() {
     name="$1"
     filename="$2"
-    mountTemp="/home/cilo/tmp"
     if ! [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) does not exists."
         exit 1;
@@ -627,7 +661,6 @@ secretCommandUpdate() {
 secretCommandDelete() {
     name="$1"
     filename="${CILO_SECRET_DIRECTORY}/local/${name}.enc"
-    mountTemp="/home/cilo/tmp"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
         exit 1;
@@ -899,25 +932,33 @@ dockerRunImage() {
     if [ ! "$(docker ps -q -f name=$2)" ]; then
         if [ "$(docker ps -aq -f status=exited -f name=$2)" ]; then
             if $VERBOSE; then info "%s\n" "Removing previous docker image ($2) after exit."; fi
-            # TODO: make sure this line works since it could try to remove a list.
             docker rm -f "$(docker ps -aq -f status=exited -f name=$2)" > /dev/null 2>&1
         fi
-        # prepareSecrets for pipeline
+        # prepare local secrets for pipeline
         local USER_KEY=`getCiloPasswordHash`
         if $VERBOSE; then info "%s\n" "Generating secret token for container ($1)."; fi
         local SECRET_KEY=`hashRandom`
         if $VERBOSE; then info "%s\n" "Preparing secrets:"; fi
         rm $CILO_TEMP_DIRECTORY/* 2> /dev/null
         for file in $CILO_SECRET_DIRECTORY/local/*.enc; do
-            if ! [ "$file" = '*' ]; then
-                filename=`basename $file`
+            if ! [ "$file" = "$CILO_SECRET_DIRECTORY/local/*.enc" ]; then
+                local dirname=`dirname $file`
+                local basename=`basename $file`
+                local extension="${basename##*.}"
+                local filename="${basename%.*}"
                 if $VERBOSE; then info "\t%s\n" "$filename"; fi
-                cp "$file" "${CILO_TEMP_DIRECTORY}/${filename}.enc" > /dev/null 2> /dev/null
+                cp "$file" "${CILO_TEMP_DIRECTORY}/secret/local/${filename}.enc" > /dev/null 2> /dev/null
+            else
+                warn "\t%s\n" "No local secrets were found."
             fi
         done
         # encrypt secrets using generated token
         if $VERBOSE; then info "%s\n" "Encrypting secrets using generated token."; fi
-        docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" --name "cilo-encrypt-temporary" -e SECRET_KEY="$SECRET_KEY" -e USER_KEY="$USER_KEY" "$1" "cilo-encrypt-temporary"
+        docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" --name "cilo-encrypt-temporary" -e SECRET_KEY="$SECRET_KEY" -e USER_KEY="$USER_KEY" "$1" "cilo-encrypt-temporary" > /dev/null 2> /dev/null
+        if ! [ "$?" = "0" ]; then
+            error "%s\n" "Could not proccess secret(s). Make sure local secrets password is correct."
+            exit 1
+        fi
         # run actual cilo docker
         if $VERBOSE; then info "%s\n" "Starting docker image ($1)."; fi
         log '================================================================================\n' "" ""
@@ -1002,7 +1043,7 @@ runCiloScript() {
 }
 
 cleanup() {
-  rm ~/.cilo/tmp/* > /dev/null 2> /dev/null
+    rm -rf ~/.cilo/tmp > /dev/null 2> /dev/null
 }
 trap cleanup EXIT
 
