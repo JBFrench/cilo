@@ -72,7 +72,7 @@ abstract class CiloBaseScript extends Script {
                 def stepString = "${step.key}"
                 def status = [:]
                 status.name = stepString
-                status.elapsedTime = 0
+                status.elapsedTimeMS = 0
                 status.status = "pending"
                 status.number = number
                 stepStatus[stepString] = status
@@ -98,7 +98,7 @@ abstract class CiloBaseScript extends Script {
                 // elapsed time
                 difference = (endTime - startTime) / 1e6;
                 stepStatus[stepString].status = "completed"
-                stepStatus[stepString].elapsedTime = difference
+                stepStatus[stepString].elapsedTimeMS = difference
                 // after
                 afterEachStep()
             }
@@ -106,15 +106,15 @@ abstract class CiloBaseScript extends Script {
             if (currentStepName != null) {
                 difference = (endTime - startTime) / 1e6;
                 stepStatus[currentStepName].status = "failed"
-                stepStatus[currentStepName].elapsedTime = difference
+                stepStatus[currentStepName].elapsedTimeMS = difference
             }
             e.printStackTrace()
         } finally {
             afterPipeline()
         }
         def json = getStatus()
-        // println "FINAL STATUS:"
-        // println json
+        println "FINAL STATUS:"
+        println json
     }
 
     private getStatus() {
@@ -127,15 +127,28 @@ abstract class CiloBaseScript extends Script {
             a.number <=> b.number
         }
         // Gather Status
-        def failedStepIndex = sorted.findIndexOf { step -> step.status == "failed" }
-        def elapsedTime = 0
+        def failedStepNumber = sorted.findIndexOf { step -> step.status == "failed" } + 1
+        def stepCount = sorted.size()
+        def pendingCount = sorted.count { step -> step.status == "pending" }
+        def lastStepNumber = stepCount - pendingCount
+        def lastStatus = "unknown"
+        if (failedStepNumber > 0) {
+            lastStatus = "failure"
+        } else if (lastStepNumber == stepCount) {
+            lastStatus = "success"
+        } else {
+            lastStatus = "running"
+        }
+        def elapsedTimeMS = 0
         for (step in sorted) {
             steps << step
-            elapsedTime += step.elapsedTime
+            elapsedTimeMS += step.elapsedTimeMS
         }
         // Add to Summary and Status
-        summary.totalTime = elapsedTime
-        summary.totalStepCount = sorted.size()
+        summary.totalTimeMS = elapsedTimeMS
+        summary.totalStepCount = stepCount
+        summary.lastStepNumber = lastStepNumber
+        summary.status = lastStatus
         status.steps = steps
         status.summary = summary
         def json = JsonOutput.toJson(status)

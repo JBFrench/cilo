@@ -101,27 +101,27 @@ a Groovy DSL.
 Here is a sample script called "depoy.cilo":
 .PP
 .RS
-    def tag = "\\${PROJECT_NAME}-\\${GIT_COMMIT}"
+    def tag = "${PROJECT_NAME}-${GIT_COMMIT}"
     def checkStatus(stdOut, stdErr, exitCode) {
       if (exitCode != 0) {
-         fail "\\${stdErr}"
+         fail "${stdErr}"
       }
     }   
 
     step("build") {
-      println """Building [\\${PROJECT_NAME}] from git branch [\\${GIT_BRANCH}] and commit [\\${GIT_COMMIT}]"""
-      \\$ ./gradlew clean assemble
+      println """Building [${PROJECT_NAME}] from git branch [${GIT_BRANCH}] and commit [${GIT_COMMIT}]"""
+      $ ./gradlew clean assemble
       checkStatus stdOut, stdErr, exitCode
-      def environment = ["TAG":"\\${tag}"]
+      def environment = ["TAG":"${tag}"]
       env(environment) {
-        \\$ docker build -t "\\$TAG" . 
+        $ docker build -t "$TAG" . 
         checkStatus stdOut, stdErr, exitCode
       }
     }
 
     step("deploy") {
       secret("awsAutomationToken") {
-        def imageName = awsSendToECR(awsAutomationToken, "\\${PROJECT_NAME}", "\\${BUILD_NUMBER}")
+        def imageName = awsSendToECR(awsAutomationToken, "${PROJECT_NAME}", "${BUILD_NUMBER}")
         deployToECS(awsAutomationToken, imageName)
       }
     }
@@ -175,7 +175,7 @@ is a need to have binary data accessible also. These variables are availible in 
 .PP
 Cilo has the ability to manage two types of secrets.
 Local secrets and organization secrets.
-Local secrets are managed exlusivly by these usage options which
+Local secrets are managed exclusivly by these usage options which
 corrispond with typical CRUD operations:
 (create, read, update and delete).
 .PP
