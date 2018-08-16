@@ -3,19 +3,23 @@ import com.google.common.collect.HashBiMap
 
 step "Basic Step Form", {
     println "Basic Step Works. "
+    assert 1 == 1
 }
 
 step("Alternate Step Form") {
     println "Alternate Step Works. "
+    assert 1 == 1
 }
 
 step "Simple Shell", {
-     $ echo "Simple from shell works. "
+    $ echo "Simple from shell works. "
+    assert 1 == 1
 }
 
 step "Mixed Shell", {
     println "Mixed from groovy works"
     $ echo "Mixed from shell works. "
+    assert 1 == 1
 }
 
 

@@ -34,7 +34,7 @@ __cilo_complete_wrapper() {
         secret)
             CILO_SECRET_DIRECTORY="$HOME/.cilo/secret"
             local secrets=""
-            for file in $CILO_SECRET_DIRECTORY/*; do
+            for file in ${CILO_SECRET_DIRECTORY}/local/*.enc; do
                 if ! [ -d "$file" ]; then
                     if ! [ "$file" = '*' ]; then
                         dirname=`dirname $file`
@@ -68,10 +68,10 @@ __cilo_complete_wrapper() {
     
     # AC for Options with arguments
     case "$previous" in
-        -d|--docker-socket)
-            options=""
-            return 0
-            ;;
+        # -d|--docker-socket)
+        #     options=""
+        #     return 0
+        #     ;;
         -i|--image)
             options=""
             return 0
@@ -84,10 +84,10 @@ __cilo_complete_wrapper() {
             options=""
             return 0
             ;;
-        -r|--registry)
-            options=""
-            return 0
-            ;;
+        # -r|--registry)
+        #     options=""
+        #     return 0
+        #     ;;
         -s|--server)
             options=""
             return 0
@@ -125,7 +125,7 @@ __cilo_complete_wrapper() {
             return 0
             ;;
         *)
-            options="run help version shell secret"
+            options="run version shell secret help"
             COMPREPLY=( $(compgen -W "${options}" -- ${current}) )
             return 0
             ;;

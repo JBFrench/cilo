@@ -10,7 +10,7 @@ RUN addgroup -S cilogroup && adduser -S cilo -G cilogroup
 USER cilo
 RUN echo 'export PS1="\u:\w$ "' >> ~/.bashrc
 RUN mkdir -p /home/cilo/bin/
-RUN mkdir -p /home/cilo/secret/
+RUN mkdir -p /home/cilo/secret/local/
 ADD cilo-scripts/ /home/cilo/bin/
 ENV PATH="/home/cilo/bin/:${PATH}"
 WORKDIR /home/cilo/workspace/

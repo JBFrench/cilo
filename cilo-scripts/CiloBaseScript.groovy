@@ -1,3 +1,5 @@
+import groovy.json.*
+
 abstract class CiloBaseScript extends Script {
     abstract def runCode()
 
@@ -23,6 +25,9 @@ abstract class CiloBaseScript extends Script {
     protected static def stdOut = ""
     protected static def stdErr = ""
     protected static def exitCode = 0
+
+    // used for json status object
+    protected static def stepStatus = [:]
     
     def run() {       
         BUILD_NUMBER = dockerEnv["BUILD_NUMBER"].toInteger()
@@ -53,25 +58,101 @@ abstract class CiloBaseScript extends Script {
         collectGitInformation()
 
         beforePipeline()
+        def currentStep=null
+        def currentStepName=null
+        long startTime = 0
+        long endTime = 0
+        long difference = 0
         try {
             final result = runCode()
+            // Add Steps' Status
+            def number = 0
+            for (step in steps) {
+                number++
+                def stepString = "${step.key}"
+                def status = [:]
+                status.name = stepString
+                status.elapsedTimeMS = 0
+                status.status = "pending"
+                status.number = number
+                stepStatus[stepString] = status
+            }
+            // Execute Steps
             for (step in steps) {
                 def stepString = "${step.key}"
+                currentStep = step
+                currentStepName = stepString
+                stepStatus[stepString].status = "in-progress"
                 def lineCount = 80-stepString.length()
                 def line = "-".multiply(lineCount)
                 println "-".multiply(80)
                 println "-".multiply(76)+"STEP"
                 println "${line}${stepString}"
                 println "-".multiply(80)
+                //before
                 beforeEachStep()
-                step.value() // run closure
+                // run closure
+                startTime = System.nanoTime();
+                step.value()
+                endTime = System.nanoTime();
+                // elapsed time
+                difference = (endTime - startTime) / 1e6;
+                stepStatus[stepString].status = "completed"
+                stepStatus[stepString].elapsedTimeMS = difference
+                // after
                 afterEachStep()
             }
         } catch (e) {
+            if (currentStepName != null) {
+                difference = (endTime - startTime) / 1e6;
+                stepStatus[currentStepName].status = "failed"
+                stepStatus[currentStepName].elapsedTimeMS = difference
+            }
             e.printStackTrace()
         } finally {
             afterPipeline()
         }
+        def json = getStatus()
+        println "FINAL STATUS:"
+        println json
+    }
+
+    private getStatus() {
+        def status = [:]
+        def summary = [:]
+        def steps = []
+        def sorted = []
+        stepStatus.each { key, value -> sorted << value }
+        sorted = sorted.sort { a, b ->
+            a.number <=> b.number
+        }
+        // Gather Status
+        def failedStepNumber = sorted.findIndexOf { step -> step.status == "failed" } + 1
+        def stepCount = sorted.size()
+        def pendingCount = sorted.count { step -> step.status == "pending" }
+        def lastStepNumber = stepCount - pendingCount
+        def lastStatus = "unknown"
+        if (failedStepNumber > 0) {
+            lastStatus = "failure"
+        } else if (lastStepNumber == stepCount) {
+            lastStatus = "success"
+        } else {
+            lastStatus = "running"
+        }
+        def elapsedTimeMS = 0
+        for (step in sorted) {
+            steps << step
+            elapsedTimeMS += step.elapsedTimeMS
+        }
+        // Add to Summary and Status
+        summary.totalTimeMS = elapsedTimeMS
+        summary.totalStepCount = stepCount
+        summary.lastStepNumber = lastStepNumber
+        summary.status = lastStatus
+        status.steps = steps
+        status.summary = summary
+        def json = JsonOutput.toJson(status)
+        return json
     }
 
     def beforeEachStep() {
@@ -188,7 +269,7 @@ abstract class CiloBaseScript extends Script {
             def nameText = "${name}Text"
             def nameBytes = "${name}Bytes"
             def nameFile = "${name}File"
-            def secretFile = new File("/home/cilo/secret/${name}")
+            def secretFile = new File("/home/cilo/secret/local/${name}")
             if (secretFile == null || secretFile.length() <= 0) {
                 throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
             }
@@ -197,7 +278,7 @@ abstract class CiloBaseScript extends Script {
             secretsMap << ["${name}":"${secretText}"]
             secretsMap << ["${nameText}":"${secretText}"]
             secretsMap << ["${nameBytes}":"${secretBytes}"]
-            secretsMap << ["${nameFile}":"/home/cilo/secret/${name}"]
+            secretsMap << ["${nameFile}":"/home/cilo/secret/local/${name}"]
             for (secretPair in secretsMap) {
                 binding.setVariable(secretPair.key, secretPair.value)
             }
@@ -209,7 +290,7 @@ abstract class CiloBaseScript extends Script {
             def nameText = "${name}Text"
             def nameBytes = "${name}Bytes"
             def nameFile = "${name}File"
-            def secretFile = new File("/home/cilo/secret/${name}")
+            def secretFile = new File("/home/cilo/secret/local/${name}")
             if (secretFile == null || secretFile.length() <= 0) {
                 throw new IllegalArgumentException("Secret '${name}' is either empty or does not exist.")
             }
@@ -219,7 +300,7 @@ abstract class CiloBaseScript extends Script {
             secretsMap.remove("${nameText}")
             secretsMap.remove("${nameBytes}")
             secretsMap.remove("${nameFile}")
-            shell("rm /home/cilo/secret/${name}")
+            shell("rm /home/cilo/secret/local/${name}")
         }
     }
     

@@ -30,19 +30,10 @@ main() {
                 transmitted to a centrallized cilo server for CO (continuous operation).
 
            OPTIONS
-                -d|--docker-socket <docker-socker-filepath>
-                        Use custom docker socket for communicating with docker.
-                        DEFAULT:   /var/run/docker.sock
-                        NOTE:      Follows same rules as --unix-socket from curl.
-
                 -i|--image <image-name>
                         Name of docker image used to build.
                         DEFAULT:   cilo
                         NOTE:      Must inherit from cilo's image.
-
-                --interactive|--no-interactive
-                        Runs the project in interactive mode
-                        DEFAULT:   --interactive
 
                 -h|--help|--usage
                         Show usage
@@ -63,9 +54,6 @@ main() {
                         
                 --pull
                         Rebuilds or pulls latest docker image.
-
-                -r|--registry <image-registry-url>
-                        Use to get image from a differenct registry
 
                 -s|--server <cilo-server-url>
                        URL of your cilo server.
@@ -188,13 +176,13 @@ EOF`
     PWD=`pwd`
     PIPELINE=()
     COMMAND=()
-    INTERACTIVE="true"
+    # INTERACTIVE="true"
     VERBOSE="false"
     VVV="false"
     LOGGING="false"
     LOGGING_DIRECTORY="log/"
     DOCKER_SOCKET="/var/run/docker.sock"
-    DOCKER_REGISTRY_URL=""
+    # DOCKER_REGISTRY_URL=""
     DOCKER_IMAGE_NAME="cirrosoft/cilo"
     DOCKER_REBUILD="false"
     LIBRARY_PATH="cilib/"
@@ -203,7 +191,6 @@ EOF`
 
     CILO_TEMP_DIRECTORY="$HOME/.cilo/tmp"
     CILO_SECRET_DIRECTORY="$HOME/.cilo/secret"
-
 
     PROJECT_NAME="cilo" # todo: get from git or filestructure
     USER=""
@@ -255,10 +242,10 @@ parseArgs() {
                 VVV="true"
                 shift;
                 ;;
-            -d|--docker-socket)
-                DOCKER_SOCKET="$2"
-                shift; shift
-                ;;
+            # -d|--docker-socket)
+            #     DOCKER_SOCKET="$2"
+            #     shift; shift
+            #     ;;
             --pull)
                 DOCKER_REBUILD="true"
                 shift;
@@ -283,22 +270,22 @@ parseArgs() {
                 LOGGING_DIRECTORY="$2"
                 shift; shift;
                 ;;
-            --interactive)
-                INTERACTIVE="true"
-                shift;
-                ;;
-            --no-interactive)
-                INTERACTIVE="false"
-                shift;
-                ;;
+            # --interactive)
+            #     INTERACTIVE="true"
+            #     shift;
+            #     ;;
+            # --no-interactive)
+            #     INTERACTIVE="false"
+            #     shift;
+            #     ;;
             --i|--image)
                 DOCKER_IMAGE_NAME="$2"
                 shift; shift
                 ;;
-            -r|--registry)
-                DOCKER_REGISTRY_URL="$2"
-                shift; shift;
-                ;;
+            # -r|--registry)
+            #     DOCKER_REGISTRY_URL="$2"
+            #     shift; shift;
+            #     ;;
             -*)
                 printf "\n\t%s\n" "ERROR: Unknown option ($key)."
                 showUsage
@@ -412,7 +399,7 @@ secretGetInput() {
 
 ensure() {
     ensureCiloDirectories
-    ensurePassword
+    ensureIdentity
 }
 
 ensureCiloDirectories() {
@@ -425,16 +412,48 @@ ensureCiloDirectories() {
     if ! [ -d "$CILO_TEMP_DIRECTORY" ]; then
         mkdir -p "$CILO_TEMP_DIRECTORY"
     fi
+    if ! [ -d "$CILO_TEMP_DIRECTORY/secret/local/" ]; then
+        mkdir -p "$CILO_TEMP_DIRECTORY/secret/local/"
+    fi
     if ! [ -d "$CILO_SECRET_DIRECTORY" ]; then
         mkdir -p "$CILO_SECRET_DIRECTORY"
     fi
+    if ! [ -d "$CILO_SECRET_DIRECTORY/local" ]; then
+        mkdir -p "$CILO_SECRET_DIRECTORY/local"
+    fi
 }
 
-ensurePassword() {
-    if ! [ -e "$HOME/.cilo/password.hash" ]; then
+ensureIdentity() {
+    if ! [ -e "${CILO_SECRET_DIRECTORY}/local/password.hash" ]; then
         local password="password"
+	echo
+	printf "%s\n" "Cilo password for local secrets has not been set. Please set password."
         read -s -p "Cilo Secrets Password: " password
-        hashString "$password" > "$HOME/.cilo/password.hash"
+        echo
+	false
+       	[[ $password =~ ^[A-Za-z0-9!@#$%^\&*\(\)+_=?.-]{8,}$ ]] && true
+	if ! [ "$?" = "0" ]; then
+		printf "%s\n" "Password must be at least 8 characters long and may only alphanumerics and these symbols !@#$%^&*()-=_+?."
+		exit 1
+	fi
+	runCiloBash "printf ' '"
+        hashString "$password" > "${CILO_SECRET_DIRECTORY}/local/password.hash"
+        info "%s\n" "Ensuring local secret consistency.";
+        for file in $CILO_SECRET_DIRECTORY/local/*.enc; do
+            local dirname=`dirname $file`
+            local basename=`basename $file`
+            local extension="${basename##*.}"
+            local filename="${basename%.*}"
+            if ! [ "$file" = "$CILO_SECRET_DIRECTORY/local/*.enc" ]; then
+                info "%s\n" "Verifying password with secret (${filename}).";
+                verifyPasswordForFile "$file"
+                if ! [ "$?" = "0" ]; then
+                    rm "${CILO_SECRET_DIRECTORY}/local/password.hash" > /dev/null 2> /dev/null
+                    error "%s\n" "Password does not match secret (${filename}). Either delete the secret or enter proper password."
+                    exit 1
+                fi
+            fi
+        done
         echo
     fi
 }
@@ -450,7 +469,7 @@ syncProjectVariables() {
 }
 
 getCiloPasswordHash() {
-    cat "$HOME/.cilo/password.hash" | tr -d '\n' | tr -d '\r'
+    cat "${CILO_SECRET_DIRECTORY}/local/password.hash" | tr -d '\n' | tr -d '\r'
 }
 
 secretCommand() {
@@ -534,8 +553,24 @@ secretCommand() {
     exit 0
 }
 
+verifyPasswordForFile() {
+    local filename=encryptFile
+    local password=`getCiloPasswordHash`
+    if ! [ -z ${2+1} ]; then
+        password="$2"
+    fi
+    cp $1 $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
+    runCiloBash "cat /home/cilo/tmp/$filename | openssl enc -pass pass:\"$password\" -a -d -aes-256-cbc" | grep "bad decrypt" > /dev/null 2> /dev/null
+    if [ "$?" = "0" ]; then
+        rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
+        false
+        return
+    fi
+    rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
+}
+
 encryptFile() {
-    filename=encryptFile
+    local filename=encryptFile
     local password=`getCiloPasswordHash`
     if ! [ -z "${2+1}" ]; then
         password="$2"
@@ -550,7 +585,7 @@ encryptFile() {
 }
 
 decryptFile() {
-    filename=encryptFile
+    local filename=encryptFile
     local password=`getCiloPasswordHash`
     if ! [ -z ${2+1} ]; then
         password="$2"
@@ -558,6 +593,7 @@ decryptFile() {
     cp $1 $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
     runCiloBash "cat /home/cilo/tmp/$filename | openssl enc -pass pass:\"$password\" -a -d -aes-256-cbc"
     if ! [ "$?" = "0" ]; then
+        rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
         echo "Cilo password is not valid for secret ($name)."
         exit 1
     fi
@@ -569,7 +605,7 @@ hashRandom() {
 }
 
 hashFile() {
-    filename=encryptFile
+    local filename=encryptFile
     cp $1 $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
     runCiloBash "cat /home/cilo/tmp/$filename | openssl dgst -sha512 | cut -d ' ' -f2- | tr -d '\n' | tr -d '\r'"
     rm $CILO_TEMP_DIRECTORY/$filename > /dev/null 2> /dev/null
@@ -579,11 +615,24 @@ hashString() {
     runCiloBash "printf '%s' \"$1\" | openssl dgst -sha512 | cut -d ' ' -f2- | tr -d '\n' | tr -d '\r'"
 }
 
-secretCommandCreate() {
+matchesSecretPattern() {
+	return
+	false
+       	[[ $1 =~ ^[a-zA-Z][A-Za-z0-9_.-]*$ ]] && true
+	if ! [ "$?" = "0" ]; then
+		error "%s\n" "Secret name must be at least 1 character long, start with a letter, only contain alphanumerics and these symbols -_."
+		false
+		exit 1
+	else
+		true
+	fi
+}
+
+ secretCommandCreate() {
     name="$1"
     filename="$2"
-    mountTemp="/home/cilo/tmp"
-    if [ -e "$CILO_SECRET_DIRECTORY/$name" ]; then
+    matchesSecretPattern "$name"
+    if [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) already exists."
         exit 1;
     fi
@@ -591,13 +640,14 @@ secretCommandCreate() {
         error "%s\n" "Secret by the name of ($name) does not have a binary file ($filename) to load."
         exit 1;
     fi
-    encryptFile "$filename" > "$CILO_SECRET_DIRECTORY/$name"
+    encryptFile "$filename" > "${CILO_SECRET_DIRECTORY}/local/${name}.enc"
     log "%s\n" "Secret Added ($name)."
 }
 
 secretCommandRead() {
     name="$1"
-    filename="$CILO_SECRET_DIRECTORY/$name"
+    filename="$CILO_SECRET_DIRECTORY/local/${name}.enc"
+    matchesSecretPattern "$name"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
         exit 1;
@@ -608,8 +658,8 @@ secretCommandRead() {
 secretCommandUpdate() {
     name="$1"
     filename="$2"
-    mountTemp="/home/cilo/tmp"
-    if ! [ -e "$CILO_SECRET_DIRECTORY/$name" ]; then
+    matchesSecretPattern "$name"
+    if ! [ -e "${CILO_SECRET_DIRECTORY}/local/${name}.enc" ]; then
         error "%s\n" "Secret by the name of ($name) does not exists."
         exit 1;
     fi
@@ -617,14 +667,14 @@ secretCommandUpdate() {
         error "%s\n" "Secret by the name of ($name) does not have a binary file ($filename) to load."
         exit 1;
     fi
-    encryptFile "$filename" > "$CILO_SECRET_DIRECTORY/$name"
+    encryptFile "$filename" > "${CILO_SECRET_DIRECTORY}/local/${name}.enc"
     log "%s\n" "Secret updated ($name)."
 }
 
 secretCommandDelete() {
     name="$1"
-    filename="$CILO_SECRET_DIRECTORY/$name"
-    mountTemp="/home/cilo/tmp"
+    filename="${CILO_SECRET_DIRECTORY}/local/${name}.enc"
+    matchesSecretPattern "$name"
     if ! [ -e "$filename" ]; then
         error "%s\n" "Secret by the name of ($name) does not exist."
         exit 1;
@@ -645,13 +695,13 @@ getProperty() {
 getPropertiesFromFile() {
     local PROP_FILE="$1"
     if [ -f "$PROP_FILE" ]; then
-        var=(); var=`getProperty "$PROP_FILE" "INTERACTIVE"`;           INTERACTIVE="${var:-$INTERACTIVE}"
+        # var=(); var=`getProperty "$PROP_FILE" "INTERACTIVE"`;           INTERACTIVE="${var:-$INTERACTIVE}"
         var=(); var=`getProperty "$PROP_FILE" "VERBOSE"`;               VERBOSE="${var:-$VERBOSE}"
         var=(); var=`getProperty "$PROP_FILE" "VVV"`;                   VVV="${var:-$VVV}"
         var=(); var=`getProperty "$PROP_FILE" "LOGGING"`;               LOGGING="${var:-$LOGGING}"
         var=(); var=`getProperty "$PROP_FILE" "LOGGING_DIRECTORY"`;     LOGGING_DIRECTORY="${var:-$LOGGING_DIRECTORY}"
-        var=(); var=`getProperty "$PROP_FILE" "DOCKER_SOCKET"`;         DOCKER_SOCKET="${var:-$DOCKER_SOCKET}"
-        var=(); var=`getProperty "$PROP_FILE" "DOCKER_REGISTRY_URL"`;   DOCKER_REGISTRY_URL="${var:-$DOCKER_REGISTRY_URL}"
+        # var=(); var=`getProperty "$PROP_FILE" "DOCKER_SOCKET"`;         DOCKER_SOCKET="${var:-$DOCKER_SOCKET}"
+        # var=(); var=`getProperty "$PROP_FILE" "DOCKER_REGISTRY_URL"`;   DOCKER_REGISTRY_URL="${var:-$DOCKER_REGISTRY_URL}"
         var=(); var=`getProperty "$PROP_FILE" "DOCKER_IMAGE_NAME"`;     DOCKER_IMAGE_NAME="${var:-$DOCKER_IMAGE_NAME}"
         var=(); var=`getProperty "$PROP_FILE" "DOCKER_REBUILD"`;        DOCKER_REBUILD="${var:-$DOCKER_REBUILD}"
         var=(); var=`getProperty "$PROP_FILE" "LIBRARY_PATH"`;          LIBRARY_PATH="${var:-$LIBRARY_PATH}"
@@ -661,9 +711,13 @@ getPropertiesFromFile() {
 }
 
 listSecretDirectory() {
-    for filename in $CILO_SECRET_DIRECTORY/*; do
-        if ! [ "$filename" = '*' ]; then
-            basename $filename
+    for file in ${CILO_SECRET_DIRECTORY}/local/*.enc; do
+        if ! [ "$file" = "${CILO_SECRET_DIRECTORY}/local/*.enc" ]; then
+            dirname=`dirname $file`
+            basename=`basename $file`
+            extension="${basename##*.}"
+            filename="${basename%.*}"
+            printf "%s\n" "$filename"
         fi
     done
 }
@@ -708,13 +762,13 @@ logInit() {
     if $VERBOSE; then
         info "PROJECT_NAME           = %s\n" "${PROJECT_NAME}"
         info "PWD                    = %s\n" "${PWD}"
-        info "INTERACTIVE            = %s\n" "${INTERACTIVE}"
+        # info "INTERACTIVE            = %s\n" "${INTERACTIVE}"
         info "VERBOSE                = %s\n" "${VERBOSE}"
         info "VVV                    = %s\n" "${VERBOSE}"
         info "LOGGING                = %s\n" "${LOGGING}"
         info "LOGGING_DIRECTORY      = %s\n" "${LOGGING_DIRECTORY}"
-        info "DOCKER_SOCKET          = %s\n" "${DOCKER_SOCKET}"
-        info "DOCKER_REGISTRY_URL    = %s\n" "${DOCKER_REGISTRY_URL}"
+        # info "DOCKER_SOCKET          = %s\n" "${DOCKER_SOCKET}"
+        # info "DOCKER_REGISTRY_URL    = %s\n" "${DOCKER_REGISTRY_URL}"
         info "DOCKER_IMAGE_NAME      = %s\n" "${DOCKER_IMAGE_NAME}"
         info "DOCKER_REBUILD         = %s\n" "${DOCKER_REBUILD}"
         info "LIBRARY_PATH           = %s\n" "${LIBRARY_PATH}"
@@ -807,7 +861,7 @@ copyGitInformation() {
         info "%s\n" "Copying git information."
     fi
 
-    rm $PWD/.cilo/*.git
+    rm $PWD/.cilo/*.git > /dev/null 2> /dev/null
     
     BRANCH_NAME=`cat .git/HEAD | sed -e 's/ref: refs\/heads\/\(.*\)/\1/'`
     COMMIT_HASH=`cat .git/refs/heads/$BRANCH_NAME`   
@@ -892,25 +946,33 @@ dockerRunImage() {
     if [ ! "$(docker ps -q -f name=$2)" ]; then
         if [ "$(docker ps -aq -f status=exited -f name=$2)" ]; then
             if $VERBOSE; then info "%s\n" "Removing previous docker image ($2) after exit."; fi
-            # TODO: make sure this line works since it could try to remove a list.
             docker rm -f "$(docker ps -aq -f status=exited -f name=$2)" > /dev/null 2>&1
         fi
-        # prepareSecrets for pipeline
+        # prepare local secrets for pipeline
         local USER_KEY=`getCiloPasswordHash`
         if $VERBOSE; then info "%s\n" "Generating secret token for container ($1)."; fi
         local SECRET_KEY=`hashRandom`
         if $VERBOSE; then info "%s\n" "Preparing secrets:"; fi
         rm $CILO_TEMP_DIRECTORY/* 2> /dev/null
-        for file in $CILO_SECRET_DIRECTORY/*; do
-            if ! [ "$file" = '*' ]; then
-                filename=`basename $file`
+        for file in $CILO_SECRET_DIRECTORY/local/*.enc; do
+            if ! [ "$file" = "$CILO_SECRET_DIRECTORY/local/*.enc" ]; then
+                local dirname=`dirname $file`
+                local basename=`basename $file`
+                local extension="${basename##*.}"
+                local filename="${basename%.*}"
                 if $VERBOSE; then info "\t%s\n" "$filename"; fi
-                cp "$file" "${CILO_TEMP_DIRECTORY}/${filename}.enc" > /dev/null 2> /dev/null
+                cp "$file" "${CILO_TEMP_DIRECTORY}/secret/local/${filename}.enc" > /dev/null 2> /dev/null
+            else
+                warn "\t%s\n" "No local secrets were found."
             fi
         done
         # encrypt secrets using generated token
         if $VERBOSE; then info "%s\n" "Encrypting secrets using generated token."; fi
-        docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" --name "cilo-encrypt-temporary" -e SECRET_KEY="$SECRET_KEY" -e USER_KEY="$USER_KEY" "$1" "cilo-encrypt-temporary"
+        docker run -it --rm -v "$CILO_TEMP_DIRECTORY:/home/cilo/tmp" --name "cilo-encrypt-temporary" -e SECRET_KEY="$SECRET_KEY" -e USER_KEY="$USER_KEY" "$1" "cilo-encrypt-temporary" > /dev/null 2> /dev/null
+        if ! [ "$?" = "0" ]; then
+            error "%s\n" "Could not proccess secret(s). Make sure local secrets password is correct."
+            exit 1
+        fi
         # run actual cilo docker
         if $VERBOSE; then info "%s\n" "Starting docker image ($1)."; fi
         log '================================================================================\n' "" ""
@@ -995,7 +1057,7 @@ runCiloScript() {
 }
 
 cleanup() {
-  rm ~/.cilo/tmp/* > /dev/null 2> /dev/null
+    rm -rf ~/.cilo/tmp > /dev/null 2> /dev/null
 }
 trap cleanup EXIT
 
