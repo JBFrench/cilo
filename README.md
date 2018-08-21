@@ -10,8 +10,8 @@ This file is written in a language called "cilo" as a seamless combination betwe
 a Groovy DSL.
 Here is a sample script called "depoy.cilo":
 ```
-def tag = "${PROJECT_NAME}-${GIT_COMMIT}"
-
+def tag = "${PROJECT_NAME}-${git.commitHash}"
+build
 def checkStatus(stdOut, stdErr, exitCode) {
       if (exitCode != 0) {
             fail "${stdErr}"
@@ -19,7 +19,7 @@ def checkStatus(stdOut, stdErr, exitCode) {
 }                   
 
 step("build") {
-      println """Building [${PROJECT_NAME}] from git branch [${GIT_BRANCH}] and commit [${GIT_COMMIT}]"""
+      println """Building [${PROJECT_NAME}] from git branch [${git.branchName}] and commit [${git.commitHash}]"""
       $ ./gradlew clean assemble
       checkStatus stdOut, stdErr, exitCode
       def environment = ["TAG":"${tag}"]
