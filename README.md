@@ -5,6 +5,7 @@ __Cilo__ stands for Continuous Integration LOcally and is a decentralized CI/CD 
 The goal of __Cilo__ is to give developers the ability to build and deploy applications from their own machines while still allowing organizations to enforce quality gates and restrict direct access to secure information like passwords and other credentials.
 
 ## Run
+### Default
 Cilo operates on what's called a cilo "run". Each run has a corrisponding cilo file.
 This file is written in a language called "cilo" as a seamless combination between Bash and
 a Groovy DSL.
@@ -49,6 +50,12 @@ In the case of the deploy step, it has access to a secret by the name of awsAuto
 Inside of this scope their are three new variables: awsAutomationToken, awsAutomationTokenBytes and
 awsAutomationTokenFile. Having a secret in a string is nice; but other forms are for when there
 is a need to have binary data accessible also. These variables are availible in groovy and bash.
+### Custom Images
+  Cilo's default docker images comes with a few command line tools and the groovy DSL. The recommended way to extend this functionality is to extend the base cilo docker image and pass it to cilo via the -i command. 
+  ```
+  cilo run -i custom-cilo-image-name
+  ```
+  Be sure to run `cilo -h` for more information on Cilo's options.
 
 ## Secrets
   Cilo has the ability to manage two types of secrets.
