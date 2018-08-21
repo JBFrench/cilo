@@ -21,6 +21,7 @@ The goal of __Cilo__ is to give developers the ability to build and deploy appli
 ## Use
 ### Run
 `
+
 NAME
     Cilo -  CI (Continuous Integration) Local
          Pronounced \ˈsīlō/
@@ -129,9 +130,12 @@ DETAILS
   Inside of this scope their are three new variables: awsAutomationToken, awsAutomationTokenBytes and
   awsAutomationTokenFile. Having a secret in a string is nice; but other forms are for when there
   is a need to have binary data accessible also. These variables are availible in groovy and bash.
+
 `
+
 ### Secrets
 `
+ 
  NAME
       Cilo Local Secrets
 
