@@ -6,7 +6,7 @@ The goal of __Cilo__ is to give developers the ability to build and deploy appli
 
 ## Using Cilo
 ### Run
-Cilo operates on what's called a cilo "run". Each run has a corrisponding cilo file.
+Cilo operates on what's called a cilo "run". Each run has a corresponding cilo file.
 This file is written in a language called "cilo" as a seamless combination between Bash and
 a Groovy DSL.
 Here is a sample script called "depoy.cilo":
