@@ -51,7 +51,7 @@ Inside of this scope their are three new variables: awsAutomationToken, awsAutom
 awsAutomationTokenFile. Having a secret in a string is nice; but other forms are for when there
 is a need to have binary data accessible also. These variables are availible in groovy and bash.
 ### Custom Images
-  Cilo's default docker images comes with a few command line tools and the groovy DSL. The recommended way to extend this functionality is to extend the base cilo docker image and pass it to cilo via the -i command. 
+  Cilo's default Docker image comes with a few command line tools and the groovy DSL. The recommended way to extend this functionality is to extend the base cilo docker image using Docker's `FROM` syntax and pass it to cilo via the -i command. 
   ```
   cilo run -i custom-cilo-image-name your-script.cilo
   ```
