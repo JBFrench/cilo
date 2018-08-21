@@ -1,7 +1,7 @@
 # Cilo
 __Cilo__ stands for Continuous Integration LOcally and is a decentralized continuous delivery build platform with a focus on fast feedback, minimal setup, and secure credentials management. 
 
-## Goals
+## Goal
 The goal of __Cilo__ is to give developers the ability to build and deploy applications from their own machines while still allowing organizations to enforce quality gates and restrict direct access to secure information like passwords and other credentials.
 
 ## Run
@@ -11,31 +11,31 @@ DETAILS
     a Groovy DSL.
     Here is a sample script called "depoy.cilo":
 ```
-        def tag = "${PROJECT_NAME}-${GIT_COMMIT}"
+def tag = "${PROJECT_NAME}-${GIT_COMMIT}"
 
-        def checkStatus(stdOut, stdErr, exitCode) {
-          if (exitCode != 0) {
-             fail "${stdErr}"
-          }
-        }                   
+def checkStatus(stdOut, stdErr, exitCode) {
+      if (exitCode != 0) {
+            fail "${stdErr}"
+      }
+}                   
 
-        step("build") {
-          println """Building [${PROJECT_NAME}] from git branch [${GIT_BRANCH}] and commit [${GIT_COMMIT}]"""
-          $ ./gradlew clean assemble
-          checkStatus stdOut, stdErr, exitCode
-          def environment = ["TAG":"${tag}"]
-          env(environment) {
+step("build") {
+      println """Building [${PROJECT_NAME}] from git branch [${GIT_BRANCH}] and commit [${GIT_COMMIT}]"""
+      $ ./gradlew clean assemble
+      checkStatus stdOut, stdErr, exitCode
+      def environment = ["TAG":"${tag}"]
+      env(environment) {
             $ docker build -t "$TAG" . 
             checkStatus stdOut, stdErr, exitCode
-          }
-        }
+      }
+}
 
-        step("deploy") {
-          secret("awsAutomationToken") {
+step("deploy") {
+      secret("awsAutomationToken") {
             def imageName = awsSendToECR(awsAutomationToken, "${PROJECT_NAME}", "${BUILD_NUMBER}")
             deployToECS(awsAutomationToken, imageName)
-          }
-        }
+      }
+}
 ```
   This run revolves arount a built-in function called step. Above there are two steps,
 one called "build" and one called "deploy".
@@ -64,14 +64,14 @@ and are encrypted again using a random key that is used for only one cilo run.
 A secret is only unencrypted in memory (or file based on secret file usage) for
 the durration of a cilo secret block:
 ```
-  secret("secret-name") {
-    println ${secret-name}
-  }
+secret("secret-name") {
+      println ${secret-name}
+}
 ```
   When the secret block exits that particular unencrypted version of 
 a secret is lost. Once the docker container exits the randomly generated 
-key is release from memory. All secrets are masked out (*******) from
-local and remote logging.
+key is release from memory. All secrets are masked out (\*\*\*\*\*\*\*) from
+local and remote logging. So if the value of the secret "secret-name" above was "hello, i am a secret" the output from loggig it anywhere would be (\*\*\*\*\*\*\*).
 
 ## Installation
 ### Mac
