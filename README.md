@@ -1,5 +1,5 @@
 # Cilo
-__Cilo__ stands for Continuous Integration LOcally and is a decentralized continuous delivery build platform with a focus on fast feedback, minimal setup, and secure credentials management. 
+__Cilo__ stands for Continuous Integration LOcally and is a decentralized CI/CD build platform with a focus on fast feedback, minimal setup, and secure credentials management. 
 
 ## Goal
 The goal of __Cilo__ is to give developers the ability to build and deploy applications from their own machines while still allowing organizations to enforce quality gates and restrict direct access to secure information like passwords and other credentials.
