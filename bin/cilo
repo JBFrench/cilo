@@ -71,7 +71,7 @@ main() {
                         Extra verbose...to the point of debug.
 
            DETAILS
-                  Cilo operates on what's called a cilo "run". Each run has a corrisponding cilo file.
+                  Cilo operates on what's called a cilo "run". Each run has a corresponding cilo file.
                 This file is written in a language called "cilo" as a seamless combination between Bash and
                 a Groovy DSL.
                 Here is a sample script called "depoy.cilo":
@@ -130,7 +130,7 @@ EOF`
                   Cilo has the ability to manage two types of secrets.
                 Local secrets and organization secrets.
                 Local secrets are managed exlusivly by these usage options which
-                corrispond with typical CRUD operations:
+                corresponding with typical CRUD operations:
                 (create, read, update and delete).
                   These types of secrets are for personal use or for a small number of
                 individuals. They are stored locally on your machine in an encrypted form
