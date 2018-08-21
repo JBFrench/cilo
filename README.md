@@ -77,7 +77,7 @@ secret("secret-name") {
   When the secret block exits that particular unencrypted version of 
 a secret is lost. Once the docker container exits the randomly generated 
 key is release from memory. All secrets are masked out (\*\*\*\*\*\*\*) from
-local and remote logging. So if the value of the secret "secret-name" above was "hello, i am a secret" the output from loggig it anywhere would be (\*\*\*\*\*\*\*).
+local and remote logging. So if the value of the secret "secret-name" above was "hello, i am a secret" the output from loggig it anywhere would be \*\*\*\*\*\*\*.
 
 ## Installation
 ### Mac
