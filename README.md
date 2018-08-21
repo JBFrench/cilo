@@ -5,11 +5,10 @@ __Cilo__ stands for Continuous Integration LOcally and is a decentralized contin
 The goal of __Cilo__ is to give developers the ability to build and deploy applications from their own machines while still allowing organizations to enforce quality gates and restrict direct access to secure information like passwords and other credentials.
 
 ## Run
-DETAILS
-      Cilo operates on what's called a cilo "run". Each run has a corrisponding cilo file.
-    This file is written in a language called "cilo" as a seamless combination between Bash and
-    a Groovy DSL.
-    Here is a sample script called "depoy.cilo":
+Cilo operates on what's called a cilo "run". Each run has a corrisponding cilo file.
+This file is written in a language called "cilo" as a seamless combination between Bash and
+a Groovy DSL.
+Here is a sample script called "depoy.cilo":
 ```
 def tag = "${PROJECT_NAME}-${GIT_COMMIT}"
 
