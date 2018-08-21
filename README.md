@@ -53,7 +53,7 @@ is a need to have binary data accessible also. These variables are availible in 
 ### Custom Images
   Cilo's default docker images comes with a few command line tools and the groovy DSL. The recommended way to extend this functionality is to extend the base cilo docker image and pass it to cilo via the -i command. 
   ```
-  cilo run -i custom-cilo-image-name
+  cilo run -i custom-cilo-image-name your-script.cilo
   ```
   Be sure to run `cilo -h` for more information on Cilo's options.
 
